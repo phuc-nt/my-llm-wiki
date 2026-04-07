@@ -1,5 +1,5 @@
-# export graph as an Obsidian vault: one .md per node, one _COMMUNITY_.md per community,
-# .obsidian/graph.json for community coloring in Obsidian's graph view
+# export graph as a markdown vault: one .md per node, one _COMMUNITY_.md per community,
+# .vault/graph.json for community coloring in graph view
 from __future__ import annotations
 import importlib
 import json
@@ -25,7 +25,7 @@ _FTYPE_TAG: dict[str, str] = {
 
 
 def _safe_name(label: str) -> str:
-    """Strip characters forbidden in Obsidian filenames."""
+    """Strip characters forbidden in vault filenames."""
     return re.sub(r'[\\/*?:"<>|#^[\]]', "", label).strip() or "unnamed"
 
 
@@ -92,7 +92,7 @@ def _write_node_notes(
                 lines.append(f"- [[{neighbor_label}]] - `{relation}` [{confidence}]")
             lines.append("")
 
-        # Inline tags for Obsidian tag panel
+        # Inline tags for tag panel
         inline_tags = " ".join(f"#{t}" for t in node_tags)
         lines.append(inline_tags)
 
@@ -165,10 +165,10 @@ def _write_community_notes(
             lines.append(entry)
         lines.append("")
 
-        # Dataview live query (requires Dataview plugin in Obsidian)
+        # Dataview live query
         comm_tag_name = community_name.replace(" ", "_")
         lines += [
-            "## Live Query (requires Dataview plugin)",
+            "## Live Query",
             "",
             "```dataview",
             f"TABLE source_file, type FROM #community/{comm_tag_name}",
@@ -213,19 +213,19 @@ def _write_community_notes(
     return written
 
 
-def to_obsidian(
+def to_vault(
     G: nx.Graph,
     communities: dict[int, list[str]],
     output_dir: str,
     community_labels: dict[int, str] | None = None,
     cohesion: dict[int, float] | None = None,
 ) -> int:
-    """Export graph as an Obsidian vault.
+    """Export graph as a markdown vault.
 
     Writes:
       - One <NodeLabel>.md per node with YAML frontmatter, [[wikilinks]], inline tags
       - One _COMMUNITY_<name>.md per community with members, dataview query, bridge nodes
-      - .obsidian/graph.json for community coloring in Obsidian graph view
+      - .vault/graph.json for community coloring in graph view
 
     Returns total number of notes written (node notes + community notes).
     """
@@ -241,9 +241,9 @@ def to_obsidian(
         G, out, communities, node_filename, node_community, community_labels, cohesion
     )
 
-    # Write .obsidian/graph.json to color nodes by community in Obsidian graph view
-    obsidian_dir = out / ".obsidian"
-    obsidian_dir.mkdir(exist_ok=True)
+    # Write .vault/graph.json to color nodes by community in graph view
+    vault_dir = out / ".vault"
+    vault_dir.mkdir(exist_ok=True)
     graph_config = {
         "colorGroups": [
             {
@@ -256,6 +256,6 @@ def to_obsidian(
             for cid, label in sorted((community_labels or {}).items())
         ]
     }
-    (obsidian_dir / "graph.json").write_text(json.dumps(graph_config, indent=2), encoding="utf-8")
+    (vault_dir / "graph.json").write_text(json.dumps(graph_config, indent=2), encoding="utf-8")
 
     return G.number_of_nodes() + community_notes

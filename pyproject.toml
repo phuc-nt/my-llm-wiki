@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "my-llm-wiki"
 version = "0.1.0"
-description = "Turn any folder into a queryable knowledge graph with Obsidian output. Inspired by Andrej Karpathy's LLM Wiki concept."
+description = "Turn any folder into a queryable knowledge graph. Inspired by Andrej Karpathy's LLM Wiki concept."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-keywords = ["knowledge-graph", "obsidian", "wiki", "ast", "tree-sitter", "llm-wiki"]
+keywords = ["knowledge-graph", "wiki", "ast", "tree-sitter", "llm-wiki", "markdown"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

@@ -5,7 +5,7 @@
 <h1 align="center">my-llm-wiki</h1>
 
 <p align="center">
-  Turn any folder of code, docs, or papers into a queryable knowledge graph with Obsidian output.
+  Turn any folder of code, docs, or papers into a queryable knowledge graph.
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ The core insight: **compile once, query forever.**
 > *"A large fraction of my recent token throughput has gone not into manipulating code, but into manipulating knowledge."*
 > — Andrej Karpathy
 
-`my-llm-wiki` brings this idea to life. Drop your code, docs, or papers into a folder. Run the pipeline. Get an interactive knowledge graph, Wikipedia-style articles, and an Obsidian vault — all from a single command.
+`my-llm-wiki` brings this idea to life. Drop your code, docs, or papers into a folder. Run the pipeline. Get an interactive knowledge graph, Wikipedia-style articles, and a markdown vault with `[[wikilinks]]` — all from a single command.
 
 ---
 
@@ -54,7 +54,7 @@ pip install -e .[all]      # Everything
 from pathlib import Path
 from my_llm_wiki import detect, extract, build, cluster, score_all
 from my_llm_wiki import god_nodes, surprising_connections, suggest_questions
-from my_llm_wiki import generate, to_json, to_html, to_wiki, to_obsidian
+from my_llm_wiki import generate, to_json, to_html, to_wiki, to_vault
 
 root = Path(".")
 
@@ -92,7 +92,7 @@ Path("wiki-out/WIKI_REPORT.md").write_text(report)
 to_json(G, communities, "wiki-out/graph.json")
 to_html(G, communities, "wiki-out/graph.html", community_labels)
 to_wiki(G, communities, "wiki-out/wiki", community_labels, cohesion, nodes)
-to_obsidian(G, communities, "wiki-out/obsidian", community_labels, cohesion)
+to_vault(G, communities, "wiki-out/vault", community_labels, cohesion)
 ```
 
 ---
@@ -106,7 +106,7 @@ your-files/
                                                               ├─ graph.json    (queryable graph)
                                                               ├─ WIKI_REPORT.md
                                                               ├─ wiki/         (Wikipedia-style articles)
-                                                              └─ obsidian/     (Obsidian vault)
+                                                              └─ vault/        (markdown vault with [[wikilinks]])
 ```
 
 ### Pipeline
@@ -119,7 +119,7 @@ your-files/
 | **cluster** | Find communities via Leiden/Louvain — topology-based, no embeddings |
 | **analyze** | Identify god nodes, surprising connections, suggested questions |
 | **report** | Generate a markdown audit trail |
-| **export** | Output JSON + interactive HTML + wiki articles + Obsidian vault |
+| **export** | Output JSON + interactive HTML + wiki articles + markdown vault |
 
 ### Supported Languages
 
@@ -135,7 +135,7 @@ Python · JavaScript · TypeScript · Go · Rust · Java · C · C++ · Ruby · 
 | `wiki-out/graph.json` | Persistent graph — query weeks later without re-reading files |
 | `wiki-out/WIKI_REPORT.md` | God nodes, surprising connections, suggested questions, knowledge gaps |
 | `wiki-out/wiki/` | Wikipedia-style articles — one per community + god nodes |
-| `wiki-out/obsidian/` | Obsidian vault — `[[wikilinks]]`, YAML frontmatter, `.obsidian/graph.json` |
+| `wiki-out/vault/` | Markdown vault — `[[wikilinks]]`, YAML frontmatter, `.vault/graph.json` |
 
 ---
 
@@ -147,7 +147,7 @@ Karpathy's LLM Wiki concept has three layers:
 2. **Wiki layer** — compiled knowledge with cross-references
 3. **Schema layer** — rules for how the wiki is structured
 
-`my-llm-wiki` implements this as a deterministic pipeline. Code files get parsed by tree-sitter AST — no LLM calls, no API keys, no hallucination. The result is a knowledge graph you can browse, query, and open in Obsidian.
+`my-llm-wiki` implements this as a deterministic pipeline. Code files get parsed by tree-sitter AST — no LLM calls, no API keys, no hallucination. The result is a knowledge graph you can browse, query, and explore.
 
 ### Design Principles
 
@@ -155,7 +155,7 @@ Karpathy's LLM Wiki concept has three layers:
 - **No vector databases** — at personal scale, graph topology beats embeddings
 - **Three confidence levels** — `EXTRACTED` (found in source), `INFERRED` (reasoned), `AMBIGUOUS` (needs review)
 - **SHA256 cache** — re-runs only process changed files
-- **Obsidian-native** — wikilinks, YAML frontmatter, graph coloring, Dataview queries
+- **Vault-ready** — wikilinks, YAML frontmatter, graph coloring, community tags
 
 ---
 

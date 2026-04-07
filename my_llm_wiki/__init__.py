@@ -1,9 +1,9 @@
-"""my-llm-wiki — turn any folder into a queryable knowledge graph with Obsidian output.
+"""my-llm-wiki — turn any folder into a queryable knowledge graph.
 
 Pipeline: detect → extract → build → cluster → analyze → report → export
 
 Usage:
-    from my_llm_wiki import detect, extract, build, cluster, analyze, generate, to_html, to_obsidian
+    from my_llm_wiki import detect, extract, build, cluster, analyze, generate, to_html, to_vault
 """
 from __future__ import annotations
 import importlib
@@ -36,7 +36,7 @@ def __getattr__(name: str):
         "to_json": ("my_llm_wiki.export-json", "to_json"),
         "to_html": ("my_llm_wiki.export-html", "to_html"),
         "to_wiki": ("my_llm_wiki.export-wiki", "to_wiki"),
-        "to_obsidian": ("my_llm_wiki.export-obsidian", "to_obsidian"),
+        "to_vault": ("my_llm_wiki.export-vault", "to_vault"),
     }
     if name in _map:
         mod_name, attr = _map[name]

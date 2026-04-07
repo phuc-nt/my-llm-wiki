@@ -1,5 +1,5 @@
 # graph analysis helpers — god nodes, surprising connections, community utilities
-# shared across report-markdown, export-json, export-html, export-wiki, export-obsidian
+# shared across report-markdown, export-json, export-html, export-wiki, export-vault
 from __future__ import annotations
 from collections import Counter
 from pathlib import Path
