@@ -76,8 +76,20 @@ def main() -> None:
         results.append(doc_result)
         print(f"[wiki] Docs: {len(doc_result.get('nodes', []))} nodes · {len(doc_result.get('edges', []))} edges")
 
+    # Create hub nodes for image files (content extraction needs agent mode)
+    image_files = info["files"].get("image", [])
+    if image_files:
+        img_nodes = [
+            {"id": f"img_{i}", "label": Path(f).stem, "file_type": "image",
+             "source_file": str(Path(f).relative_to(target) if Path(f).is_absolute() else f),
+             "source_location": ""}
+            for i, f in enumerate(image_files)
+        ]
+        results.append({"nodes": img_nodes, "edges": []})
+        print(f"[wiki] Images: {len(image_files)} files (use agent mode for content extraction)")
+
     if not results:
-        print("[wiki] No code or document files found. Nothing to extract.")
+        print("[wiki] No supported files found. Nothing to extract.")
         sys.exit(0)
 
     # 3. Build
