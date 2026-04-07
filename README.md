@@ -44,6 +44,14 @@ llm-wiki query gods                      # most connected nodes
 llm-wiki query stats                     # summary statistics
 ```
 
+## Watch & Ingest
+
+```bash
+llm-wiki watch .              # auto-rebuild on file changes
+llm-wiki watch . 10           # poll every 10 seconds
+llm-wiki add https://url.com  # fetch URL, save as markdown, rebuild later
+```
+
 ## Outputs
 
 | File | What |
@@ -93,14 +101,14 @@ Karpathy's LLM Wiki has 3 layers: **Raw → Compile → Query**
 | **Raw** | `.wikiignore` + SHA256 cache | ✅ Done |
 | **Compile** | AST extraction (18 languages) | ✅ Done |
 | **Compile** | Community detection + labeling | ✅ Done |
-| **Compile** | LLM compile for docs/papers | 🔲 Planned |
-| **Compile** | LLM compile for images | 🔲 Planned |
-| **Compile** | Cross-reference code ↔ docs ↔ papers | 🔲 Planned |
-| **Compile** | User-defined schema rules | 🔲 Planned |
+| **Compile** | Structural extraction for docs/papers | ✅ Done |
+| **Compile** | LLM semantic extraction (agent mode) | ✅ Done |
+| **Compile** | Cross-reference code ↔ docs | ✅ Done |
+| **Compile** | User-defined schema rules (`.wikischema`) | ✅ Done |
 | **Query** | CLI query (search, path, neighbors) | ✅ Done |
 | **Query** | Claude Code skill integration | ✅ Done |
-| **Query** | File watcher (auto-recompile on change) | 🔲 Planned |
-| **Query** | URL ingest (web, arxiv, PDF links) | 🔲 Planned |
+| **Query** | File watcher (`llm-wiki watch`) | ✅ Done |
+| **Query** | URL ingest (`llm-wiki add <url>`) | ✅ Done |
 
 ## License
 

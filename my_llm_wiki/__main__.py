@@ -6,11 +6,31 @@ from pathlib import Path
 
 
 def main() -> None:
-    # Route 'query' subcommand
+    # Route subcommands
     if len(sys.argv) > 1 and sys.argv[1] == "query":
         import importlib
         _query = importlib.import_module("my_llm_wiki.query-graph")
         _query.query_main(sys.argv[2:])
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "watch":
+        import importlib
+        _watch = importlib.import_module("my_llm_wiki.watch-folder")
+        watch_target = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(".")
+        interval = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+        _watch.watch(watch_target, interval)
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "add":
+        import importlib
+        _ingest = importlib.import_module("my_llm_wiki.ingest-url")
+        if len(sys.argv) < 3:
+            print("Usage: llm-wiki add <url> [--author <name>]")
+            sys.exit(1)
+        url = sys.argv[2]
+        author = sys.argv[4] if len(sys.argv) > 4 and sys.argv[3] == "--author" else None
+        _ingest.ingest(url, author=author)
+        print("[wiki] Run `llm-wiki .` to rebuild the graph with ingested content.")
         return
 
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
@@ -20,7 +40,7 @@ def main() -> None:
 
     from my_llm_wiki import (
         detect, extract, extract_docs, build, cluster, score_all,
-        label_communities,
+        label_communities, cross_reference,
         god_nodes, surprising_connections, suggest_questions,
         generate, to_json, to_html, to_wiki, to_vault,
     )
@@ -62,6 +82,15 @@ def main() -> None:
 
     # 3. Build
     G = build(results)
+
+    # 3b. Cross-reference code ↔ docs
+    if code_files and all_doc_files:
+        xref_edges = cross_reference(G, target)
+        if xref_edges:
+            for e in xref_edges:
+                G.add_edge(e["source"], e["target"], **{k: v for k, v in e.items() if k not in ("source", "target")})
+            print(f"[wiki] Cross-ref: {len(xref_edges)} code↔doc edges")
+
     print(f"[wiki] Graph: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges")
 
     # 4. Cluster

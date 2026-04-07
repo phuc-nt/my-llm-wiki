@@ -40,6 +40,15 @@ def __getattr__(name: str):
         "to_vault": ("my_llm_wiki.export-vault", "to_vault"),
         # doc extraction
         "extract_docs": ("my_llm_wiki.extract-docs", "extract_docs"),
+        # cross-reference
+        "cross_reference": ("my_llm_wiki.extract-cross-reference", "cross_reference"),
+        # url ingest
+        "ingest": ("my_llm_wiki.ingest-url", "ingest"),
+        # file watcher
+        "watch": ("my_llm_wiki.watch-folder", "watch"),
+        # schema
+        "load_schema": ("my_llm_wiki.schema-rules", "load_schema"),
+        "validate_graph": ("my_llm_wiki.schema-rules", "validate_graph"),
         # query
         "query_main": ("my_llm_wiki.query-graph", "query_main"),
     }
