@@ -127,6 +127,7 @@ _SKIP_DIRS = {
     "site-packages", "lib64",
     ".pytest_cache", ".mypy_cache", ".ruff_cache",
     ".tox", ".eggs", "*.egg-info",
+    OUTPUT_DIR,  # skip own output directory (wiki-out)
 }
 
 
@@ -197,11 +198,14 @@ def detect(root: Path) -> dict:
     skipped_sensitive: list[str] = []
     ignore_patterns = _load_wikiignore(root)
 
-    # Always include wiki-out/memory/ - query results filed back into the graph
+    # Always include wiki-out/memory/ and wiki-out/ingested/ even though wiki-out is skipped
     memory_dir = root / OUTPUT_DIR / "memory"
+    ingested_dir = root / OUTPUT_DIR / "ingested"
     scan_paths = [root]
     if memory_dir.exists():
         scan_paths.append(memory_dir)
+    if ingested_dir.exists():
+        scan_paths.append(ingested_dir)
 
     seen: set[Path] = set()
     all_files: list[Path] = []
