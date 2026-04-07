@@ -67,6 +67,9 @@ def _is_noisy_term(term: str) -> bool:
     """Filter out terms that look like code output, table rows, or noise."""
     if len(term) > 40 or len(term) < 2:
         return True
+    # Reject non-printable / control characters
+    if any(ord(c) < 32 and c not in '\n\r\t' for c in term):
+        return True
     # Table-like content: multiple spaces, tabs, columns
     if '  ' in term or '\t' in term:
         return True
@@ -115,15 +118,40 @@ def _normalize_link_target(target: str, source_file: str) -> str | None:
     return '/'.join(parts) if parts else None
 
 
+def _read_file_text(path: Path) -> str:
+    """Read file content as text. Handles PDF via pypdf, others as UTF-8."""
+    if path.suffix.lower() == ".pdf":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(path))
+            pages = [page.extract_text() or "" for page in reader.pages]
+            return "\n\n".join(pages)
+        except ImportError:
+            return ""  # pypdf not installed
+        except Exception:
+            return ""
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
 def extract_doc(path: Path, root: Path | None = None) -> dict:
     """Extract nodes and edges from a single markdown/text document.
 
     Returns same format as AST extractor: {"nodes": [...], "edges": [...]}
     """
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return {"nodes": [], "edges": []}
+    text = _read_file_text(path)
+    if not text.strip():
+        # No extractable text — create minimal hub node only
+        str_path = str(path.relative_to(root)) if root else str(path)
+        doc_name = path.stem
+        doc_id = _make_id(str_path, doc_name)
+        return {"nodes": [{
+            "id": doc_id, "label": doc_name,
+            "file_type": "paper" if path.suffix.lower() == ".pdf" else "document",
+            "source_file": str_path, "source_location": "L1",
+        }], "edges": []}
 
     str_path = str(path.relative_to(root)) if root else str(path)
     nodes: list[dict] = []

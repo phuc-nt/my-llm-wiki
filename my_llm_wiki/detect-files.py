@@ -106,6 +106,8 @@ def classify_file(path: Path) -> FileType | None:
 def count_words(path: Path) -> int:
     try:
         ext = path.suffix.lower()
+        if ext in IMAGE_EXTENSIONS:
+            return 0  # images have no text words
         if ext == ".pdf":
             return len(extract_pdf_text(path).split())
         if ext == ".docx":
