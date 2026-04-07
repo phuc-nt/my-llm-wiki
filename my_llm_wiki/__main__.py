@@ -13,6 +13,7 @@ def main() -> None:
 
     from my_llm_wiki import (
         detect, extract, build, cluster, score_all,
+        label_communities,
         god_nodes, surprising_connections, suggest_questions,
         generate, to_json, to_html, to_wiki, to_vault,
     )
@@ -47,7 +48,7 @@ def main() -> None:
     # 4. Cluster
     communities = cluster(G)
     cohesion = score_all(G, communities)
-    community_labels = {cid: f"Community {cid}" for cid in communities}
+    community_labels = label_communities(G, communities)
     print(f"[wiki] {len(communities)} communities detected")
 
     # 5. Analyze

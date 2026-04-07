@@ -15,12 +15,12 @@ def _partition(G: nx.Graph) -> dict[str, int]:
     """
     try:
         from graspologic.partition import leiden
-        return leiden(G)
+        return leiden(G, resolution=1.5)
     except ImportError:
         pass
 
     # Fallback: networkx louvain (available since networkx 2.7)
-    communities = nx.community.louvain_communities(G, seed=42)
+    communities = nx.community.louvain_communities(G, seed=42, resolution=1.5)
     return {node: cid for cid, nodes in enumerate(communities) for node in nodes}
 
 
@@ -42,7 +42,7 @@ def build_graph(nodes: list[dict], edges: list[dict]) -> nx.Graph:
     return G
 
 
-_MAX_COMMUNITY_FRACTION = 0.25   # communities larger than 25% of graph get split
+_MAX_COMMUNITY_FRACTION = 0.15   # communities larger than 15% of graph get split
 _MIN_SPLIT_SIZE = 10             # only split if community has at least this many nodes
 
 

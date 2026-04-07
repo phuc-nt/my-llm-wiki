@@ -26,6 +26,7 @@ def __getattr__(name: str):
         "cluster": ("my_llm_wiki.cluster-communities", "cluster"),
         "score_all": ("my_llm_wiki.cluster-communities", "score_all"),
         "cohesion_score": ("my_llm_wiki.cluster-communities", "cohesion_score"),
+        "label_communities": ("my_llm_wiki.cluster-label-communities", "label_communities"),
         # analysis
         "god_nodes": ("my_llm_wiki.analyze-graph", "god_nodes"),
         "surprising_connections": ("my_llm_wiki.analyze-graph", "surprising_connections"),

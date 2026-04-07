@@ -64,6 +64,17 @@ def _top_level_dir(path: str) -> str:
     return path.split("/")[0] if "/" in path else path
 
 
+def _is_test_file(path: str) -> bool:
+    """Return True if the path looks like a test file."""
+    basename = path.split("/")[-1]
+    parts = path.split("/")
+    return (
+        basename.startswith("test_")
+        or basename.endswith("_test.py")
+        or "tests" in parts[:-1]
+    )
+
+
 def _surprise_score(G: nx.Graph, u: str, v: str, data: dict,
                     node_community: dict[str, int], u_source: str, v_source: str,
                     ) -> tuple[int, list[str]]:
@@ -136,6 +147,9 @@ def _cross_file_surprises(G: nx.Graph, communities: dict[int, list[str]], top_n:
         u_source = G.nodes[u].get("source_file", "")
         v_source = G.nodes[v].get("source_file", "")
         if not u_source or not v_source or u_source == v_source:
+            continue
+        # Skip or penalise expected test↔production connections
+        if _is_test_file(u_source) != _is_test_file(v_source):
             continue
         score, reasons = _surprise_score(G, u, v, data, node_community, u_source, v_source)
         src_id, tgt_id = data.get("_src", u), data.get("_tgt", v)

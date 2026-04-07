@@ -29,12 +29,26 @@ def _safe_name(label: str) -> str:
     return re.sub(r'[\\/*?:"<>|#^[\]]', "", label).strip() or "unnamed"
 
 
+def _truncate_label(label: str) -> str:
+    """Truncate long labels for use as vault filenames.
+
+    If the label contains more than 8 words, truncate to 60 chars and append ellipsis.
+    Strips trailing spaces/punctuation before the ellipsis.
+    """
+    words = label.split()
+    if len(words) <= 8:
+        return label
+    truncated = label[:60].rstrip(" ,;:-.")
+    return truncated + "\u2026"
+
+
 def _build_node_filenames(G: nx.Graph) -> dict[str, str]:
     """Map node_id → deduplicated safe filename (without .md extension)."""
     node_filename: dict[str, str] = {}
     seen_names: dict[str, int] = {}
     for node_id, data in G.nodes(data=True):
-        base = _safe_name(data.get("label", node_id))
+        raw_label = data.get("label", node_id)
+        base = _safe_name(_truncate_label(raw_label))
         if base in seen_names:
             seen_names[base] += 1
             node_filename[node_id] = f"{base}_{seen_names[base]}"

@@ -117,6 +117,7 @@ def resolve_cross_file_imports(per_file: list[dict], paths: list[Path]) -> list[
     parser = Parser(language)
 
     # Pass 1: stem → {ClassName: node_id}
+    # Only index real code entities (functions/classes), not rationale/docstring nodes
     stem_to_entities: dict[str, dict[str, str]] = {}
     for file_result in per_file:
         for node in file_result.get("nodes", []):
@@ -126,6 +127,11 @@ def resolve_cross_file_imports(per_file: list[dict], paths: list[Path]) -> list[
             stem = Path(src).stem
             label = node.get("label", "")
             nid = node.get("id", "")
+            # Skip rationale nodes and sentence-like labels (docstring descriptions)
+            if node.get("file_type") == "rationale":
+                continue
+            if len(label.split()) > 5:
+                continue
             if label and not label.endswith((")", ".py")) and "_" not in label[:1]:
                 stem_to_entities.setdefault(stem, {})[label] = nid
 
@@ -139,6 +145,10 @@ def resolve_cross_file_imports(per_file: list[dict], paths: list[Path]) -> list[
             if n.get("source_file") == str_path
             and not n["label"].endswith((")", ".py"))
             and n["id"] != _make_id(stem)
+            # Skip rationale/docstring nodes — they are not real code entities
+            and n.get("file_type") != "rationale"
+            # Skip nodes whose label looks like a sentence (docstring descriptions)
+            and len(n["label"].split()) <= 5
         ]
         if not local_classes:
             continue
