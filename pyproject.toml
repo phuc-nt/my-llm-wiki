@@ -13,16 +13,11 @@ keywords = ["knowledge-graph", "wiki", "ast", "tree-sitter", "llm-wiki", "markdo
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 
-[project.urls]
-Homepage = "https://github.com/phuc-nt/my-llm-wiki"
-Repository = "https://github.com/phuc-nt/my-llm-wiki"
-Issues = "https://github.com/phuc-nt/my-llm-wiki/issues"
 dependencies = [
     "networkx",
     "tree-sitter",
@@ -45,6 +40,14 @@ dependencies = [
     "tree-sitter-powershell",
     "tree-sitter-elixir",
 ]
+
+[project.urls]
+Homepage = "https://github.com/phuc-nt/my-llm-wiki"
+Repository = "https://github.com/phuc-nt/my-llm-wiki"
+Issues = "https://github.com/phuc-nt/my-llm-wiki/issues"
+
+[project.scripts]
+llm-wiki = "my_llm_wiki.__main__:main"
 
 [project.optional-dependencies]
 pdf = ["pypdf", "html2text"]

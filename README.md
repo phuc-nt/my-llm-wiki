@@ -50,6 +50,18 @@ pip install -e .[all]      # Everything
 
 ## Quick Start
 
+### CLI
+
+```bash
+llm-wiki .                  # scan current folder
+llm-wiki /path/to/project   # scan specific folder
+python -m my_llm_wiki .     # alternative
+```
+
+Output goes to `wiki-out/`.
+
+### Python API
+
 ```python
 from pathlib import Path
 from my_llm_wiki import detect, extract, build, cluster, score_all
