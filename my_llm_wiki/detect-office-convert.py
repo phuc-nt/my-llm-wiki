@@ -1,0 +1,189 @@
+# office file conversion and incremental manifest management
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from my_llm_wiki.constants import OUTPUT_DIR
+
+# Default manifest path relative to working directory
+_DEFAULT_MANIFEST = f"{OUTPUT_DIR}/manifest.json"
+
+
+def extract_pdf_text(path: Path) -> str:
+    """Extract plain text from a PDF file using pypdf."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(str(path))
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+        return "\n".join(pages)
+    except Exception:
+        return ""
+
+
+def docx_to_markdown(path: Path) -> str:
+    """Convert a .docx file to markdown text using python-docx."""
+    try:
+        from docx import Document
+        doc = Document(str(path))
+        lines = []
+        for para in doc.paragraphs:
+            style = para.style.name if para.style else ""
+            text = para.text.strip()
+            if not text:
+                lines.append("")
+                continue
+            if style.startswith("Heading 1"):
+                lines.append(f"# {text}")
+            elif style.startswith("Heading 2"):
+                lines.append(f"## {text}")
+            elif style.startswith("Heading 3"):
+                lines.append(f"### {text}")
+            elif style.startswith("List"):
+                lines.append(f"- {text}")
+            else:
+                lines.append(text)
+        # Tables
+        for table in doc.tables:
+            rows = [[cell.text.strip() for cell in row.cells] for row in table.rows]
+            if not rows:
+                continue
+            header = "| " + " | ".join(rows[0]) + " |"
+            sep = "| " + " | ".join("---" for _ in rows[0]) + " |"
+            lines.extend([header, sep])
+            for row in rows[1:]:
+                lines.append("| " + " | ".join(row) + " |")
+        return "\n".join(lines)
+    except ImportError:
+        return ""
+    except Exception:
+        return ""
+
+
+def xlsx_to_markdown(path: Path) -> str:
+    """Convert an .xlsx file to markdown text using openpyxl."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        sections = []
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            rows = []
+            for row in ws.iter_rows(values_only=True):
+                if all(cell is None for cell in row):
+                    continue
+                rows.append([str(cell) if cell is not None else "" for cell in row])
+            if not rows:
+                continue
+            sections.append(f"## Sheet: {sheet_name}")
+            if len(rows) >= 1:
+                header = "| " + " | ".join(rows[0]) + " |"
+                sep = "| " + " | ".join("---" for _ in rows[0]) + " |"
+                sections.extend([header, sep])
+                for row in rows[1:]:
+                    sections.append("| " + " | ".join(row) + " |")
+        wb.close()
+        return "\n".join(sections)
+    except ImportError:
+        return ""
+    except Exception:
+        return ""
+
+
+def convert_office_file(path: Path, out_dir: Path) -> Path | None:
+    """Convert a .docx or .xlsx to a markdown sidecar in out_dir.
+
+    Returns the path of the converted .md file, or None if conversion failed
+    or the required library is not installed.
+    """
+    ext = path.suffix.lower()
+    if ext == ".docx":
+        text = docx_to_markdown(path)
+    elif ext == ".xlsx":
+        text = xlsx_to_markdown(path)
+    else:
+        return None
+
+    if not text.strip():
+        return None
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    name_hash = hashlib.sha256(str(path.resolve()).encode()).hexdigest()[:8]
+    out_path = out_dir / f"{path.stem}_{name_hash}.md"
+    out_path.write_text(
+        f"<!-- converted from {path.name} -->\n\n{text}",
+        encoding="utf-8",
+    )
+    return out_path
+
+
+def load_manifest(manifest_path: str = _DEFAULT_MANIFEST) -> dict[str, float]:
+    """Load the file modification time manifest from a previous run."""
+    try:
+        return json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_manifest(files: dict[str, list[str]], manifest_path: str = _DEFAULT_MANIFEST) -> None:
+    """Save current file mtimes so the next update run can diff against them."""
+    manifest: dict[str, float] = {}
+    for file_list in files.values():
+        for f in file_list:
+            try:
+                manifest[f] = Path(f).stat().st_mtime
+            except OSError:
+                pass  # file deleted between detect() and manifest write - skip it
+    Path(manifest_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(manifest_path).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
+def detect_incremental(root: Path, manifest_path: str = _DEFAULT_MANIFEST) -> dict:
+    """Like detect(), but returns only new or modified files since the last run.
+
+    Compares current file mtimes against the stored manifest.
+    Use for update mode: re-extract only what changed, merge into existing graph.
+    """
+    import importlib
+    _detect_mod = importlib.import_module("my_llm_wiki.detect-files")
+    full = _detect_mod.detect(root)
+    manifest = load_manifest(manifest_path)
+
+    if not manifest:
+        full["incremental"] = True
+        full["new_files"] = full["files"]
+        full["unchanged_files"] = {k: [] for k in full["files"]}
+        full["new_total"] = full["total_files"]
+        return full
+
+    new_files: dict[str, list[str]] = {k: [] for k in full["files"]}
+    unchanged_files: dict[str, list[str]] = {k: [] for k in full["files"]}
+
+    for ftype, file_list in full["files"].items():
+        for f in file_list:
+            stored_mtime = manifest.get(f)
+            try:
+                current_mtime = Path(f).stat().st_mtime
+            except Exception:
+                current_mtime = 0
+            if stored_mtime is None or current_mtime > stored_mtime:
+                new_files[ftype].append(f)
+            else:
+                unchanged_files[ftype].append(f)
+
+    current_files = {f for flist in full["files"].values() for f in flist}
+    deleted_files = [f for f in manifest if f not in current_files]
+
+    new_total = sum(len(v) for v in new_files.values())
+    full["incremental"] = True
+    full["new_files"] = new_files
+    full["unchanged_files"] = unchanged_files
+    full["new_total"] = new_total
+    full["deleted_files"] = deleted_files
+    return full
