@@ -68,7 +68,11 @@ def ingest(url: str, output_dir: str = "wiki-out/ingested",
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"[wiki] Fetching {url} ...")
-    raw = _fetch_text(url)
+    try:
+        raw = _fetch_text(url)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"[wiki] Error fetching {url}: {e}")
+        raise SystemExit(1)
 
     # Convert HTML to markdown
     if "<html" in raw.lower()[:500] or "<body" in raw.lower()[:500]:
