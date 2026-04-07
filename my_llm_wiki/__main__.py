@@ -6,6 +6,13 @@ from pathlib import Path
 
 
 def main() -> None:
+    # Route 'query' subcommand
+    if len(sys.argv) > 1 and sys.argv[1] == "query":
+        import importlib
+        _query = importlib.import_module("my_llm_wiki.query-graph")
+        _query.query_main(sys.argv[2:])
+        return
+
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
     if not target.exists():
         print(f"[wiki] Path not found: {target}")
