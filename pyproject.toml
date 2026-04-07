@@ -9,6 +9,7 @@ description = "Turn any folder into a queryable knowledge graph. Inspired by And
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
+authors = [{name = "phuc-nt"}]
 keywords = ["knowledge-graph", "wiki", "ast", "tree-sitter", "llm-wiki", "markdown"]
 classifiers = [
     "Development Status :: 4 - Beta",

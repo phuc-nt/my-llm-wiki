@@ -15,10 +15,10 @@ Inspired by [Andrej Karpathy's LLM Wiki concept](https://x.com/karpathy/status/1
 ## Install
 
 ```bash
-pip install -e .
+pip install my-llm-wiki
 
-# Optional
-pip install -e .[all]      # PDF + .docx/.xlsx + Leiden clustering
+# Optional extras
+pip install my-llm-wiki[all]   # PDF + .docx/.xlsx + Leiden clustering
 ```
 
 ## Build
