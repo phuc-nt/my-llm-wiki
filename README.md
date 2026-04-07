@@ -73,15 +73,26 @@ Python · JavaScript · TypeScript · Go · Rust · Java · C · C++ · Ruby · 
 
 ## Claude Code Integration
 
-Install as a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code) to let Claude query your codebase graph directly:
+Install as a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code) to let Claude query your codebase graph directly. See `SKILL.md` for configuration.
 
-```bash
-# After building, Claude can answer questions using the graph
-llm-wiki query search "authentication"
-llm-wiki query neighbors "UserService"
-```
+## Roadmap
 
-See `SKILL.md` for the full skill configuration.
+Karpathy's LLM Wiki has 3 layers: **Raw → Compile → Query**
+
+| Layer | Feature | Status |
+|-------|---------|--------|
+| **Raw** | Scan code, docs, papers, images | ✅ Done |
+| **Raw** | `.wikiignore` + SHA256 cache | ✅ Done |
+| **Compile** | AST extraction (18 languages) | ✅ Done |
+| **Compile** | Community detection + labeling | ✅ Done |
+| **Compile** | LLM compile for docs/papers | 🔲 Planned |
+| **Compile** | LLM compile for images | 🔲 Planned |
+| **Compile** | Cross-reference code ↔ docs ↔ papers | 🔲 Planned |
+| **Compile** | User-defined schema rules | 🔲 Planned |
+| **Query** | CLI query (search, path, neighbors) | ✅ Done |
+| **Query** | Claude Code skill integration | ✅ Done |
+| **Query** | File watcher (auto-recompile on change) | 🔲 Planned |
+| **Query** | URL ingest (web, arxiv, PDF links) | 🔲 Planned |
 
 ## License
 
