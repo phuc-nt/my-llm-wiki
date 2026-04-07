@@ -10,132 +10,164 @@ Turn any folder of code, docs, papers, or images into a queryable knowledge grap
 
 If no path given, use `.` (current directory). Follow these steps in order.
 
-### Step 1 — Run structural extraction (AST + docs)
+### Step 1 — Structural extraction
 
 ```bash
 llm-wiki .
 ```
 
-This runs: detect → AST extract (code) → structural extract (docs) → build → cluster → export.
-Output goes to `wiki-out/`. Read the summary output.
+This runs: detect → AST (code) → structural (docs) → cross-reference → build → cluster → export.
+Output goes to `wiki-out/`. Read the summary output — note what file types were found.
+
+**What structural extraction handles well:**
+- Code files (18 languages) → AST nodes, edges, cross-file imports
+- Markdown/text → headings, definitions, cross-doc links
+- Code↔doc cross-references → automatic `mentions` edges
+
+**What needs agent-mode enhancement (Step 2):**
+- DOCX without markdown headings → structural creates hub nodes only
+- Scanned PDFs → pypdf returns 0 text, only hub node created
+- Images (PNG, JPG, HEIC) → hub nodes only, no content extraction
+- Rich domain knowledge in any doc that structural parsing misses
 
 ### Step 2 — Semantic extraction (agent mode)
 
-If detection found docs, papers, or images, enhance the graph with semantic extraction.
+Check Step 1 output. If it reports docs/papers/images with few edges, enhance with agents.
 
-**Step 2a — Identify files needing semantic extraction:**
+**Step 2a — Identify files by type:**
 
-```bash
-llm-wiki query stats
+Read the Step 1 output and `.graphify_detect.json` or re-run detect to categorize files:
+- **Text/Markdown** with good structural results (many nodes) → skip, already extracted
+- **DOCX** with 0 edges → needs agent
+- **PDF** with 0 words → scanned, needs agent with vision
+- **Images** → needs agent with vision
+
+**Step 2b — Dispatch extraction agents by file type:**
+
+Group files by type. Dispatch subagents IN PARALLEL — one per group. Use these tested prompts:
+
+**For Markdown/Text docs** (only if structural extraction was thin):
+```
+You are a knowledge graph extraction agent. Read the files listed and extract domain-specific entities and relationships.
+Focus on: product features, architecture, key decisions, defined terms, workflows.
+Skip generic terms (Next Steps, Overview, Troubleshooting, etc.)
+Rules: EXTRACTED = explicit in source. INFERRED = reasonable inference.
+Files: <FILE_LIST>
+Write JSON to: <OUTPUT_PATH>/wiki-out/semantic.json
+Format: {"nodes":[{"id":"unique_id","label":"Name","file_type":"document","source_file":"path","source_location":""}],"edges":[{"source":"id","target":"id","relation":"references|defines|part_of|uses|depends_on|related_to","confidence":"EXTRACTED|INFERRED","source_file":"path"}]}
 ```
 
-Check if there are document/paper nodes. If the graph is code-only, skip to Step 3.
-
-**Step 2b — Read non-code files and extract entities:**
-
-Split non-code files into chunks of 15-20 files. Dispatch subagents IN PARALLEL using the Agent tool — one per chunk. Each subagent receives this prompt:
-
+**For DOCX files** (structural creates hub nodes only — agent essential):
 ```
-You are a knowledge graph extraction agent. Read the files listed and extract entities and relationships.
-Output ONLY valid JSON — no explanation, no markdown fences.
+You are a knowledge graph extraction agent. Read these documents and extract entities and relationships.
+Extract: people, places, concepts, events, organizations, and how they relate.
+Labels should preserve the original language where appropriate.
+Rules: EXTRACTED = explicit in source. INFERRED = reasonable inference.
+Files: <FILE_LIST>
+Write JSON to: <OUTPUT_PATH>/wiki-out/semantic.json
+Format: {"nodes":[{"id":"unique_id","label":"Name","file_type":"document","source_file":"path","source_location":""}],"edges":[{"source":"id","target":"id","relation":"discusses|mentions|authored_by|located_in|part_of|related_to|compares","confidence":"EXTRACTED|INFERRED","source_file":"path"}]}
+```
 
-Files:
-<FILE_LIST>
+**For scanned PDFs** (pypdf returns 0 text — agent reads pages with vision):
+```
+You are a knowledge graph extraction agent. Read this scanned PDF using vision.
+The PDF is scanned — use the Read tool to view pages visually.
+Extract: authors, titles, topics, people, places, concepts, citations.
+Rules: EXTRACTED = visible in source. INFERRED = reasonable inference.
+File: <FILE_PATH>
+Write JSON to: <OUTPUT_PATH>/wiki-out/semantic.json
+Format: {"nodes":[{"id":"unique_id","label":"Name","file_type":"paper","source_file":"path","source_location":""}],"edges":[{"source":"id","target":"id","relation":"published_in|authored_by|discusses|mentions|cites|related_to","confidence":"EXTRACTED|INFERRED","source_file":"path"}]}
+```
 
-Rules:
-- EXTRACTED: relationship explicit in source (citation, "see also", direct reference)
-- INFERRED: reasonable inference (shared concept, implied dependency)
-- AMBIGUOUS: uncertain — flag for review
-
-For docs: extract named concepts, key terms, decisions, rationale.
-For papers: extract claims, methods, citations, findings.
-For images: use vision — describe components, relationships, purpose.
-
-Output JSON:
-{"nodes":[{"id":"filestem_entity","label":"Human Readable","file_type":"document|paper|image","source_file":"path","source_location":"L1"}],"edges":[{"source":"id","target":"id","relation":"references|cites|defines|explains|related_to|rationale_for","confidence":"EXTRACTED|INFERRED|AMBIGUOUS","source_file":"path"}]}
+**For images** (HEIC, PNG, JPG — agent uses vision):
+```
+You are a knowledge graph extraction agent with vision. Read these images using the Read tool.
+For each image: describe what you see, extract text (OCR), identify people/places/concepts.
+Group related images (e.g., consecutive pages of same document) into one entity.
+Rules: EXTRACTED = visible in image. INFERRED = contextual inference.
+Files: <FILE_LIST>
+Write JSON to: <OUTPUT_PATH>/wiki-out/semantic.json
+Format: {"nodes":[{"id":"unique_id","label":"Name","file_type":"image","source_file":"path","source_location":""}],"edges":[{"source":"id","target":"id","relation":"depicts|mentions|authored_by|related_to|part_of","confidence":"EXTRACTED|INFERRED","source_file":"path"}]}
 ```
 
 **Step 2c — Merge semantic results into graph:**
 
-Collect JSON from all subagents. Write merged results to `wiki-out/semantic.json`:
+Collect JSON from all subagents. If multiple agents wrote separate files, merge them first. Then rebuild:
 
 ```bash
 python3 -c "
 import json
 from pathlib import Path
-from my_llm_wiki import build, cluster, score_all, label_communities
+from my_llm_wiki import build, cluster, score_all, label_communities, detect
 from my_llm_wiki import god_nodes, surprising_connections, suggest_questions
 from my_llm_wiki import generate, to_json, to_html, to_wiki, to_vault
 
-# Load existing graph data
+info = detect(Path('.'))
 existing = json.loads(Path('wiki-out/graph.json').read_text())
-
-# Load semantic results (paste collected JSON here or read from file)
 semantic = json.loads(Path('wiki-out/semantic.json').read_text())
 
-# Merge: existing + semantic
-all_results = [
-    {'nodes': [n for n in existing.get('nodes', [])], 'edges': [e for e in existing.get('links', [])]},
+G = build([
+    {'nodes': existing.get('nodes', []), 'edges': existing.get('links', [])},
     semantic,
-]
-G = build(all_results)
+])
 communities = cluster(G)
 cohesion = score_all(G, communities)
-community_labels = label_communities(G, communities)
-
-# Re-export everything
-to_json(G, communities, 'wiki-out/graph.json')
-to_html(G, communities, 'wiki-out/graph.html', community_labels)
-to_wiki(G, communities, 'wiki-out/wiki', community_labels, cohesion, god_nodes(G))
-to_vault(G, communities, 'wiki-out/vault', community_labels, cohesion)
-
-report = generate(G, communities, cohesion, community_labels,
-    god_nodes(G), surprising_connections(G, communities), {},
-    token_cost={'input': 0, 'output': 0}, root='.',
-    suggested_questions=suggest_questions(G, communities, community_labels))
-Path('wiki-out/WIKI_REPORT.md').write_text(report)
-print(f'Enhanced graph: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities')
+labels = label_communities(G, communities)
+out = Path('wiki-out')
+to_json(G, communities, str(out/'graph.json'))
+to_html(G, communities, str(out/'graph.html'), labels)
+to_wiki(G, communities, str(out/'wiki'), labels, cohesion, god_nodes(G))
+to_vault(G, communities, str(out/'vault'), labels, cohesion)
+report = generate(G, communities, cohesion, labels,
+    god_nodes(G), surprising_connections(G, communities), info,
+    token_cost={'input':0,'output':0}, root='.',
+    suggested_questions=suggest_questions(G, communities, labels))
+(out/'WIKI_REPORT.md').write_text(report, encoding='utf-8')
+print(f'Enhanced: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities')
 "
 ```
 
 ### Step 3 — Report results
 
-Print summary and offer to answer questions:
 ```
 Wiki built: X nodes · Y edges · Z communities
   graph.html  — interactive visualization
   WIKI_REPORT.md — analysis report
-  vault/      — markdown vault
+  vault/      — markdown vault with [[wikilinks]]
 
-Ask me anything about the codebase, or run: llm-wiki query search <term>
+Ask me anything, or run: llm-wiki query search <term>
 ```
 
 ---
 
-## Querying the Graph
-
-After building, query without re-reading source files:
+## CLI Reference
 
 ```bash
-llm-wiki query search GraphStore      # keyword search
-llm-wiki query node GraphStore        # node details
-llm-wiki query neighbors GraphStore   # direct connections
-llm-wiki query community 0           # list community members
-llm-wiki query path GraphStore Settings  # shortest path
-llm-wiki query gods                   # most connected nodes
-llm-wiki query stats                  # summary statistics
+llm-wiki .                          # build graph
+llm-wiki /path/to/folder            # build from specific path
+llm-wiki query search <terms>       # keyword search
+llm-wiki query node <label>         # node details
+llm-wiki query neighbors <label>    # direct connections
+llm-wiki query community <id>       # list community members
+llm-wiki query path <A> <B>         # shortest path
+llm-wiki query gods                 # most connected nodes
+llm-wiki query stats                # summary statistics
+llm-wiki watch .                    # auto-rebuild on changes
+llm-wiki add <url>                  # fetch URL, save as markdown
 ```
-
-For natural language questions: read `wiki-out/WIKI_REPORT.md` for overview, use `llm-wiki query` for specifics.
 
 ---
 
-## Key Concepts
+## Tested Extraction Quality by File Type
 
-- **3 confidence levels**: `EXTRACTED` (in source) · `INFERRED` (reasoned) · `AMBIGUOUS` (needs review)
-- **Two-pass extraction**: AST (code, free) + semantic (agent, deep)
-- **SHA256 cache**: re-runs only process changed files
-- **Topology-based clustering**: Leiden/Louvain, no embeddings
+| File Type | Structural (free) | + Agent (semantic) | Agent Needed? |
+|-----------|-------------------|-------------------|---------------|
+| Code (.py, .ts, etc.) | Full AST extraction | N/A | No |
+| Markdown (.md, .txt) | Headings + definitions + links | 2x more entities | Optional |
+| DOCX | Hub nodes only | 30x more entities | **Yes** |
+| Scanned PDF | Hub node, 0 text | 85x more entities | **Yes** |
+| Images (HEIC, PNG, JPG) | Hub nodes only | Vision extracts content | **Yes** |
+| Text PDF | Text + headings | Deeper concepts | Optional |
 
 ---
 
@@ -143,7 +175,5 @@ For natural language questions: read `wiki-out/WIKI_REPORT.md` for overview, use
 
 ```bash
 pip install my-llm-wiki
-
-# Optional
 pip install my-llm-wiki[all]   # PDF + .docx/.xlsx + Leiden clustering
 ```

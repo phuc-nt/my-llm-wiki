@@ -5,7 +5,7 @@
 <h1 align="center">my-llm-wiki</h1>
 
 <p align="center">
-  Turn any folder of code into a queryable knowledge graph.
+  Turn any folder of code, docs, papers, or images into a queryable knowledge graph.
 </p>
 
 ---
@@ -64,32 +64,41 @@ llm-wiki add https://url.com  # fetch URL, save as markdown, rebuild later
 
 ## How It Works
 
+Two-pass extraction: **structural** (free, deterministic) + **semantic** (agent mode, deep).
+
 ```
-your-files/ → detect → extract → build → cluster → analyze → export
+your-files/ → detect → extract → cross-ref → build → cluster → export
 ```
 
-- **detect** — scan for code, docs, papers. Respects `.wikiignore`
-- **extract** — parse via tree-sitter AST (18 languages). No LLM needed
-- **build** — assemble NetworkX knowledge graph
-- **cluster** — find communities via Leiden/Louvain
-- **analyze** — god nodes, surprising connections, suggested questions
-- **export** — JSON + HTML + wiki + vault
+| Pass | What | Cost |
+|------|------|------|
+| **Structural** | AST (code), headings/links (docs), hub nodes (images/PDF) | Free |
+| **Semantic** | Agent reads content with vision, extracts domain entities | Claude tokens |
 
-### Supported Languages
+### Extraction Quality by File Type
+
+| File Type | Structural (free) | + Agent (semantic) |
+|-----------|-------------------|-------------------|
+| Code (18 languages) | Full AST extraction | N/A |
+| Markdown/Text | Headings + links | 2x more entities |
+| DOCX | Hub nodes only | **30x more entities** |
+| Scanned PDF | Hub node, 0 text | **85x more entities** |
+| Images (HEIC, PNG, JPG) | Hub nodes only | **Vision extracts content** |
+
+### Supported Code Languages
 
 Python · JavaScript · TypeScript · Go · Rust · Java · C · C++ · Ruby · C# · Kotlin · Scala · PHP · Swift · Lua · Zig · PowerShell · Elixir
 
 ## Claude Code Integration
 
-Let Claude query your codebase graph directly as a skill:
+Install as a skill for deep semantic extraction (DOCX, scanned PDFs, images):
 
 ```bash
-# Copy the bundled skill into Claude Code
 mkdir -p ~/.claude/skills/my-llm-wiki
 cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
 ```
 
-After setup, Claude can use `llm-wiki query` commands to answer questions about your codebase structure.
+Then use `/wiki .` in Claude Code — it runs structural extraction first, then dispatches agents for content that needs LLM (vision for scanned docs, entity extraction for rich text).
 
 ## Roadmap
 
