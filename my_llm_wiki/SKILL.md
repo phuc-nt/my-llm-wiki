@@ -1,100 +1,120 @@
 # my-llm-wiki
 
-Turn any folder of code, docs, papers, or images into a queryable knowledge graph with markdown-compatible output.
+Turn any folder of code, docs, papers, or images into a queryable knowledge graph.
 
-**Inspired by Andrej Karpathy's LLM Wiki concept**: drop raw files → compile once → query forever. No vector databases, no RAG pipelines. Just markdown, wikilinks, and a graph.
-
----
-
-## How It Works
-
-```
-/raw  (your files)
-  └─ detect → extract → build → cluster → analyze → report → export
-                                                              ├─ wiki-out/graph.html     (interactive vis.js)
-                                                              ├─ wiki-out/graph.json     (queryable graph)
-                                                              ├─ wiki-out/WIKI_REPORT.md (audit trail)
-                                                              ├─ wiki-out/wiki/          (Wikipedia-style articles)
-                                                              └─ wiki-out/vault/      (markdown vault with [[wikilinks]])
-```
+**Karpathy LLM Wiki concept**: drop raw files → compile once → query forever.
 
 ---
 
-## Usage
+## What You Must Do When `/wiki` is Invoked
 
-### Full pipeline on a folder
+If no path given, use `.` (current directory). Follow these steps in order.
 
-```python
-/wiki .
+### Step 1 — Run structural extraction (AST + docs)
+
+```bash
+llm-wiki .
 ```
 
-This runs the complete pipeline:
-1. Detect all code, docs, papers, images in the current folder
-2. Extract structure (AST for code, LLM for docs/papers/images)
-3. Build a NetworkX knowledge graph
-4. Cluster into communities (Leiden/Louvain)
-5. Analyze: god nodes, surprising connections, suggested questions
-6. Export: JSON + HTML + wiki articles + markdown vault
+This runs: detect → AST extract (code) → structural extract (docs) → build → cluster → export.
+Output goes to `wiki-out/`. Read the summary output.
 
-### Pipeline (use in Claude Code sessions)
+### Step 2 — Semantic extraction (agent mode)
 
-```python
+If detection found docs, papers, or images, enhance the graph with semantic extraction.
+
+**Step 2a — Identify files needing semantic extraction:**
+
+```bash
+llm-wiki query stats
+```
+
+Check if there are document/paper nodes. If the graph is code-only, skip to Step 3.
+
+**Step 2b — Read non-code files and extract entities:**
+
+Split non-code files into chunks of 15-20 files. Dispatch subagents IN PARALLEL using the Agent tool — one per chunk. Each subagent receives this prompt:
+
+```
+You are a knowledge graph extraction agent. Read the files listed and extract entities and relationships.
+Output ONLY valid JSON — no explanation, no markdown fences.
+
+Files:
+<FILE_LIST>
+
+Rules:
+- EXTRACTED: relationship explicit in source (citation, "see also", direct reference)
+- INFERRED: reasonable inference (shared concept, implied dependency)
+- AMBIGUOUS: uncertain — flag for review
+
+For docs: extract named concepts, key terms, decisions, rationale.
+For papers: extract claims, methods, citations, findings.
+For images: use vision — describe components, relationships, purpose.
+
+Output JSON:
+{"nodes":[{"id":"filestem_entity","label":"Human Readable","file_type":"document|paper|image","source_file":"path","source_location":"L1"}],"edges":[{"source":"id","target":"id","relation":"references|cites|defines|explains|related_to|rationale_for","confidence":"EXTRACTED|INFERRED|AMBIGUOUS","source_file":"path"}]}
+```
+
+**Step 2c — Merge semantic results into graph:**
+
+Collect JSON from all subagents. Write merged results to `wiki-out/semantic.json`:
+
+```bash
+python3 -c "
+import json
 from pathlib import Path
-from my_llm_wiki import detect, extract, build, cluster, score_all
+from my_llm_wiki import build, cluster, score_all, label_communities
 from my_llm_wiki import god_nodes, surprising_connections, suggest_questions
 from my_llm_wiki import generate, to_json, to_html, to_wiki, to_vault
 
-root = Path(".")
+# Load existing graph data
+existing = json.loads(Path('wiki-out/graph.json').read_text())
 
-# 1. Detect files
-info = detect(root)
-print(f"{info['total_files']} files · {info['total_words']:,} words")
-if info.get("warning"):
-    print(f"Warning: {info['warning']}")
+# Load semantic results (paste collected JSON here or read from file)
+semantic = json.loads(Path('wiki-out/semantic.json').read_text())
 
-# 2. Extract (code=AST, docs/papers/images=LLM)
-code_files = [Path(f) for f in info["files"]["code"]]
-result = extract(code_files)
-
-# 3. Build graph
-G = build([result])
-
-# 4. Cluster
+# Merge: existing + semantic
+all_results = [
+    {'nodes': [n for n in existing.get('nodes', [])], 'edges': [e for e in existing.get('links', [])]},
+    semantic,
+]
+G = build(all_results)
 communities = cluster(G)
 cohesion = score_all(G, communities)
-community_labels = {cid: f"Community {cid}" for cid in communities}
+community_labels = label_communities(G, communities)
 
-# 5. Analyze
-nodes = god_nodes(G)
-surprises = surprising_connections(G, communities)
-questions = suggest_questions(G, communities, community_labels)
+# Re-export everything
+to_json(G, communities, 'wiki-out/graph.json')
+to_html(G, communities, 'wiki-out/graph.html', community_labels)
+to_wiki(G, communities, 'wiki-out/wiki', community_labels, cohesion, god_nodes(G))
+to_vault(G, communities, 'wiki-out/vault', community_labels, cohesion)
 
-# 6. Report
-report = generate(
-    G, communities, cohesion, community_labels,
-    nodes, surprises, info,
-    token_cost={"input": 0, "output": 0},
-    root=str(root),
-    suggested_questions=questions,
-)
-Path("wiki-out/WIKI_REPORT.md").write_text(report)
+report = generate(G, communities, cohesion, community_labels,
+    god_nodes(G), surprising_connections(G, communities), {},
+    token_cost={'input': 0, 'output': 0}, root='.',
+    suggested_questions=suggest_questions(G, communities, community_labels))
+Path('wiki-out/WIKI_REPORT.md').write_text(report)
+print(f'Enhanced graph: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities')
+"
+```
 
-# 7. Export
-to_json(G, communities, "wiki-out/graph.json")
-to_html(G, communities, "wiki-out/graph.html", community_labels)
-to_wiki(G, communities, "wiki-out/wiki", community_labels, cohesion, nodes)
-to_vault(G, communities, "wiki-out/vault", community_labels, cohesion)
+### Step 3 — Report results
 
-print("Done. Open wiki-out/graph.html or wiki-out/vault/ in markdown.")
+Print summary and offer to answer questions:
+```
+Wiki built: X nodes · Y edges · Z communities
+  graph.html  — interactive visualization
+  WIKI_REPORT.md — analysis report
+  vault/      — markdown vault
+
+Ask me anything about the codebase, or run: llm-wiki query search <term>
 ```
 
 ---
 
 ## Querying the Graph
 
-After running the pipeline, query the graph without re-reading source files:
-
-### CLI queries
+After building, query without re-reading source files:
 
 ```bash
 llm-wiki query search GraphStore      # keyword search
@@ -106,48 +126,16 @@ llm-wiki query gods                   # most connected nodes
 llm-wiki query stats                  # summary statistics
 ```
 
-### As Claude Code skill (natural language)
-
-When a user asks about the codebase structure, read `wiki-out/graph.json` and `wiki-out/WIKI_REPORT.md` to answer.
-For specific topics, read the relevant `wiki-out/wiki/*.md` article.
-For node-level detail, run `llm-wiki query` commands via Bash.
-
-**Workflow**: user question → read WIKI_REPORT.md for overview → use `llm-wiki query` for specifics → answer.
+For natural language questions: read `wiki-out/WIKI_REPORT.md` for overview, use `llm-wiki query` for specifics.
 
 ---
 
-## Outputs
+## Key Concepts
 
-| File | Description |
-|------|-------------|
-| `wiki-out/graph.html` | Interactive vis.js graph — click nodes, search, filter by community |
-| `wiki-out/graph.json` | Persistent graph — query weeks later without re-reading |
-| `wiki-out/WIKI_REPORT.md` | God nodes, surprising connections, suggested questions, knowledge gaps |
-| `wiki-out/wiki/` | Wikipedia-style articles — one per community + god nodes |
-| `wiki-out/vault/` | markdown vault — `[[wikilinks]]`, YAML frontmatter, `.vault/graph.json` |
-
----
-
-## Key Concepts (Karpathy LLM Wiki)
-
-- **Raw layer**: your original files — code, docs, papers, screenshots (never modified)
-- **Wiki layer**: compiled knowledge — LLM-generated articles with cross-references
-- **3 confidence levels**: `EXTRACTED` (found in source) · `INFERRED` (reasoned) · `AMBIGUOUS` (needs review)
-- **Topology-based clustering**: no embeddings — Leiden finds communities by edge density
+- **3 confidence levels**: `EXTRACTED` (in source) · `INFERRED` (reasoned) · `AMBIGUOUS` (needs review)
+- **Two-pass extraction**: AST (code, free) + semantic (agent, deep)
 - **SHA256 cache**: re-runs only process changed files
-
----
-
-## Ignore Files
-
-Create `.wikiignore` to exclude paths (same syntax as `.gitignore`):
-
-```
-vendor/
-node_modules/
-dist/
-*.generated.py
-```
+- **Topology-based clustering**: Leiden/Louvain, no embeddings
 
 ---
 
@@ -156,6 +144,6 @@ dist/
 ```bash
 pip install my-llm-wiki
 
-# Optional extras
+# Optional
 pip install my-llm-wiki[all]   # PDF + .docx/.xlsx + Leiden clustering
 ```
