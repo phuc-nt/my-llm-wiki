@@ -42,6 +42,11 @@ def _truncate_label(label: str) -> str:
     return truncated + "\u2026"
 
 
+def _dedup_key(name: str) -> str:
+    """Normalize filename for dedup: strip trailing ellipsis/punctuation."""
+    return name.rstrip("\u2026. ")
+
+
 def _build_node_filenames(G: nx.Graph) -> dict[str, str]:
     """Map node_id → deduplicated safe filename (without .md extension)."""
     node_filename: dict[str, str] = {}
@@ -49,11 +54,12 @@ def _build_node_filenames(G: nx.Graph) -> dict[str, str]:
     for node_id, data in G.nodes(data=True):
         raw_label = data.get("label", node_id)
         base = _safe_name(_truncate_label(raw_label))
-        if base in seen_names:
-            seen_names[base] += 1
-            node_filename[node_id] = f"{base}_{seen_names[base]}"
+        key = _dedup_key(base)
+        if key in seen_names:
+            seen_names[key] += 1
+            node_filename[node_id] = f"{base}_{seen_names[key]}"
         else:
-            seen_names[base] = 0
+            seen_names[key] = 0
             node_filename[node_id] = base
     return node_filename
 
