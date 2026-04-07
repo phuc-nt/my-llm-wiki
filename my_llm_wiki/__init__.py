@@ -38,6 +38,8 @@ def __getattr__(name: str):
         "to_html": ("my_llm_wiki.export-html", "to_html"),
         "to_wiki": ("my_llm_wiki.export-wiki", "to_wiki"),
         "to_vault": ("my_llm_wiki.export-vault", "to_vault"),
+        # doc extraction
+        "extract_docs": ("my_llm_wiki.extract-docs", "extract_docs"),
         # query
         "query_main": ("my_llm_wiki.query-graph", "query_main"),
     }

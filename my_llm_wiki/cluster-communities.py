@@ -10,17 +10,26 @@ import networkx as nx
 def _partition(G: nx.Graph) -> dict[str, int]:
     """Run community detection. Returns {node_id: community_id}.
 
+    Resolution adapts to graph density:
+    - Dense graphs (code): resolution=1.5 for tighter communities
+    - Sparse graphs (docs): resolution=1.0 for broader grouping
+
     Tries Leiden (graspologic) first — best quality.
     Falls back to Louvain (built into networkx) if graspologic is not installed.
     """
+    # Adaptive resolution: sparse doc graphs need lower resolution
+    density = nx.density(G) if G.number_of_nodes() > 1 else 0
+    avg_degree = sum(dict(G.degree()).values()) / max(G.number_of_nodes(), 1)
+    resolution = 1.5 if avg_degree > 3 else 1.0
+
     try:
         from graspologic.partition import leiden
-        return leiden(G, resolution=1.5)
+        return leiden(G, resolution=resolution)
     except ImportError:
         pass
 
     # Fallback: networkx louvain (available since networkx 2.7)
-    communities = nx.community.louvain_communities(G, seed=42, resolution=1.5)
+    communities = nx.community.louvain_communities(G, seed=42, resolution=resolution)
     return {node: cid for cid, nodes in enumerate(communities) for node in nodes}
 
 

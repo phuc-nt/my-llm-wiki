@@ -19,7 +19,7 @@ def main() -> None:
         sys.exit(1)
 
     from my_llm_wiki import (
-        detect, extract, build, cluster, score_all,
+        detect, extract, extract_docs, build, cluster, score_all,
         label_communities,
         god_nodes, surprising_connections, suggest_questions,
         generate, to_json, to_html, to_wiki, to_vault,
@@ -38,18 +38,30 @@ def main() -> None:
         print(f"[wiki] Warning: {info['warning']}")
 
     # 2. Extract
+    results: list[dict] = []
+
     code_files = [Path(f) for f in info["files"].get("code", [])]
-    if not code_files:
-        print("[wiki] No code files found. Nothing to extract.")
+    if code_files:
+        print(f"[wiki] Extracting AST from {len(code_files)} code files ...")
+        code_result = extract(code_files)
+        results.append(code_result)
+        print(f"[wiki] Code: {len(code_result.get('nodes', []))} nodes · {len(code_result.get('edges', []))} edges")
+
+    doc_files = [Path(f) for f in info["files"].get("document", [])]
+    paper_files = [Path(f) for f in info["files"].get("paper", [])]
+    all_doc_files = doc_files + paper_files
+    if all_doc_files:
+        print(f"[wiki] Extracting from {len(all_doc_files)} docs/papers ...")
+        doc_result = extract_docs(all_doc_files, target)
+        results.append(doc_result)
+        print(f"[wiki] Docs: {len(doc_result.get('nodes', []))} nodes · {len(doc_result.get('edges', []))} edges")
+
+    if not results:
+        print("[wiki] No code or document files found. Nothing to extract.")
         sys.exit(0)
-    print(f"[wiki] Extracting AST from {len(code_files)} code files ...")
-    result = extract(code_files)
-    nodes_count = len(result.get("nodes", []))
-    edges_count = len(result.get("edges", []))
-    print(f"[wiki] Extracted {nodes_count} nodes · {edges_count} edges")
 
     # 3. Build
-    G = build([result])
+    G = build(results)
     print(f"[wiki] Graph: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges")
 
     # 4. Cluster
