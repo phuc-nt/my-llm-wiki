@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "my-llm-wiki"
-version = "0.1.0"
+version = "0.1.1"
 description = "Turn any folder into a queryable knowledge graph. Inspired by Andrej Karpathy's LLM Wiki concept."
 readme = "README.md"
 license = "MIT"
@@ -59,3 +59,6 @@ all = ["pypdf", "html2text", "graspologic", "python-docx", "openpyxl"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["my_llm_wiki*"]
+
+[tool.setuptools.package-data]
+my_llm_wiki = ["SKILL.md"]

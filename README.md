@@ -73,7 +73,15 @@ Python · JavaScript · TypeScript · Go · Rust · Java · C · C++ · Ruby · 
 
 ## Claude Code Integration
 
-Install as a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code) to let Claude query your codebase graph directly. See `SKILL.md` for configuration.
+Let Claude query your codebase graph directly as a skill:
+
+```bash
+# Copy the bundled skill into Claude Code
+mkdir -p ~/.claude/skills/my-llm-wiki
+cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
+```
+
+After setup, Claude can use `llm-wiki query` commands to answer questions about your codebase structure.
 
 ## Roadmap
 
