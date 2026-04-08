@@ -7,7 +7,10 @@ import networkx as nx
 
 
 def _safe_filename(name: str) -> str:
-    return name.replace("/", "-").replace(" ", "_").replace(":", "-")
+    """Sanitize name for use as filename. Prevents path traversal."""
+    name = name.replace("/", "-").replace(" ", "_").replace(":", "-")
+    name = name.replace("..", "")  # prevent path traversal
+    return name or "unnamed"
 
 
 def _cross_community_links(

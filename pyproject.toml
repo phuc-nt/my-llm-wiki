@@ -51,10 +51,10 @@ Issues = "https://github.com/phuc-nt/my-llm-wiki/issues"
 llm-wiki = "my_llm_wiki.__main__:main"
 
 [project.optional-dependencies]
-pdf = ["pypdf", "html2text"]
+pdf = ["pypdf>=4.0", "html2text"]
 leiden = ["graspologic"]
-office = ["python-docx", "openpyxl"]
-all = ["pypdf", "html2text", "graspologic", "python-docx", "openpyxl"]
+office = ["python-docx>=1.0", "openpyxl>=3.1"]
+all = ["pypdf>=4.0", "html2text", "graspologic", "python-docx>=1.0", "openpyxl>=3.1"]
 
 [tool.setuptools.packages.find]
 where = ["."]

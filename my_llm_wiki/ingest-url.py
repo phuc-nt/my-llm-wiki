@@ -1,25 +1,25 @@
 # fetch URLs and save as markdown for wiki ingestion
 # Supports: web pages, PDF links, plain text
 from __future__ import annotations
+import importlib
 import re
-import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
+_security = importlib.import_module("my_llm_wiki.security-helpers")
+_validate_url = _security.validate_url
+_safe_fetch = _security.safe_fetch
+
 
 def _fetch_text(url: str) -> str:
-    """Fetch URL content as text."""
-    req = urllib.request.Request(url, headers={"User-Agent": "my-llm-wiki/0.1"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        content_type = resp.headers.get("Content-Type", "")
-        data = resp.read()
-        if "pdf" in content_type.lower():
-            return _pdf_bytes_to_text(data)
-        encoding = "utf-8"
-        if "charset=" in content_type:
-            encoding = content_type.split("charset=")[-1].split(";")[0].strip()
-        return data.decode(encoding, errors="ignore")
+    """Fetch URL content as text with SSRF protection."""
+    _validate_url(url)  # blocks private IPs, non-http schemes
+    data = _safe_fetch(url)  # size-capped, redirect-safe
+    # Detect PDF content by magic bytes
+    if data[:5] == b"%PDF-":
+        return _pdf_bytes_to_text(data)
+    return data.decode("utf-8", errors="ignore")
 
 
 def _pdf_bytes_to_text(data: bytes) -> str:
@@ -70,7 +70,7 @@ def ingest(url: str, output_dir: str = "wiki-out/ingested",
     print(f"[wiki] Fetching {url} ...")
     try:
         raw = _fetch_text(url)
-    except (urllib.error.URLError, OSError) as e:
+    except (ValueError, urllib.error.URLError, OSError) as e:
         print(f"[wiki] Error fetching {url}: {e}")
         raise SystemExit(1)
 

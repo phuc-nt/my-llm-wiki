@@ -25,8 +25,10 @@ _FTYPE_TAG: dict[str, str] = {
 
 
 def _safe_name(label: str) -> str:
-    """Strip characters forbidden in vault filenames."""
-    return re.sub(r'[\\/*?:"<>|#^[\]]', "", label).strip() or "unnamed"
+    """Strip characters forbidden in vault filenames. Prevents path traversal."""
+    name = re.sub(r'[\\/*?:"<>|#^[\]]', "", label).strip()
+    name = name.replace("..", "")  # prevent path traversal
+    return name or "unnamed"
 
 
 def _truncate_label(label: str) -> str:
