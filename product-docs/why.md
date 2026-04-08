@@ -2,49 +2,69 @@
 layout: default
 title: Why LLM Wiki
 nav_order: 2
-description: "Why knowledge graphs beat RAG and vector databases at personal scale."
+description: "Why knowledge graphs beat RAG at personal scale, and how the living wiki pattern works."
 ---
 
 # Why LLM Wiki
 
 ## The problem
 
-You have a codebase, papers, docs, screenshots. You want to ask questions about them.
+You have code, docs, papers, screenshots. You want to ask questions about them.
 
-- **Paste into chat** — hits context limits, no persistence
-- **RAG pipeline** — complex setup, vector DB, chunking, embedding model
-- **Full re-read** — expensive, slow, no cross-document connections
+| Approach | Issue |
+|----------|-------|
+| Paste into chat | Hits context limits, no persistence |
+| RAG pipeline | Complex setup, vector DB, chunking, embedding model |
+| Full re-read | Expensive, slow, no cross-document connections |
 
-None of these compile knowledge once and let you query forever.
+None compile knowledge once and let you query forever.
 
 ---
 
-## Karpathy's insight
+## Karpathy's three layers
 
 > *"A large fraction of my recent token throughput has gone not into manipulating code, but into manipulating knowledge."*
 
-Three layers:
-
-1. **Raw** — your original files, never modified
+1. **Raw** — your files, never modified
 2. **Compile** — structured knowledge with cross-references
 3. **Query** — ask questions without re-reading source files
 
-The key: **compilation is separate from querying.**
+**Compilation is separate from querying.** Build the graph once, query for weeks.
 
 ---
 
-## Graphs vs. embeddings at personal scale
+## Graphs vs. embeddings
 
 | | Vector DB (RAG) | Knowledge Graph |
 |---|---|---|
 | Setup | Embedding model + chunking + DB | `pip install my-llm-wiki` |
-| Cross-references | No — chunks are isolated | Edges connect everything |
+| Cross-references | Chunks are isolated | Edges connect everything |
 | Structure | Flat similarity | Communities, paths, hubs |
 | Explainability | "These chunks are similar" | "A calls B which imports C" |
 | Persistence | Running DB | JSON file on disk |
 | Cost | Embedding API calls | Free (AST) or one-time (agent) |
 
-At personal scale (10-1000 files), you don't need approximate nearest neighbor. You need to see **what connects to what**.
+At personal scale (10-1000 files), you don't need approximate nearest neighbor. You need **what connects to what**.
+
+---
+
+## The living wiki
+
+Karpathy's vision goes beyond "compile once" — the wiki is a **persistent, compounding artifact**. Every session adds knowledge. Insights get filed back. The graph grows over time.
+
+```
+Monitor → Rebuild → Lint → Write-back → Report
+   ↑                                       │
+   └───────────────────────────────────────┘
+```
+
+- **Monitor** — detect file changes, trigger rebuild
+- **Rebuild** — SHA256 cache skips unchanged files
+- **Lint** — find orphans, tiny communities, high ambiguity
+- **Write-back** — file insights as markdown, merge into graph
+- **Report** — track growth: nodes, edges, communities over time
+
+This cycle is implemented in the Claude Code skill. The agent follows it automatically when you run `/wiki .`.
 
 ---
 
@@ -53,7 +73,7 @@ At personal scale (10-1000 files), you don't need approximate nearest neighbor. 
 Every edge is tagged:
 
 - **EXTRACTED** — found directly in source (import, link, citation)
-- **INFERRED** — reasoned by extractor (shared data, implied dependency)
+- **INFERRED** — reasoned by extractor (shared concept, implied dependency)
 - **AMBIGUOUS** — uncertain, flagged for review
 
 You always know what was found vs. guessed.

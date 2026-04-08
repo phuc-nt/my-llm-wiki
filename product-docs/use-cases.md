@@ -86,16 +86,41 @@ llm-wiki query stats   # how much is INFERRED vs EXTRACTED?
 
 ---
 
-## Claude Code integration
+## Living wiki for a team
 
-After building the graph, Claude can answer questions without re-reading source files:
+The graph compounds over time. Each developer session adds knowledge:
 
 ```bash
-# Install the skill
+# Day 1: initial build
+llm-wiki .
+
+# Day 5: new files added, rebuild (cache skips unchanged)
+llm-wiki .
+
+# Day 10: file an insight from debugging session
+mkdir -p wiki-out/ingested
+echo "# SharedConnection: GraphStore and MemoryStore share SQLite connection pool" \
+  > wiki-out/ingested/insight_shared_connection.md
+llm-wiki .   # insight now in graph
+
+# Weekly: health check
+llm-wiki lint
+```
+
+---
+
+## Claude Code integration
+
+After building, Claude answers questions without re-reading source files:
+
+```bash
+# Install skill
 mkdir -p ~/.claude/skills/my-llm-wiki
 cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
 
-# Then in Claude Code:
-# /wiki .           → full pipeline with agent enhancement
+# /wiki .     → structural + agent extraction (DOCX, PDF, images)
+# /wiki lint  → graph health check
 # "what connects GraphStore to Settings?" → Claude uses llm-wiki query
 ```
+
+The skill implements the full living wiki cycle — monitor, rebuild, lint, write-back.

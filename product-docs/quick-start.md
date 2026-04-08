@@ -42,22 +42,25 @@ wiki-out/
 ```bash
 llm-wiki query gods                      # most connected nodes
 llm-wiki query search "authentication"   # keyword search
+llm-wiki query node UserService          # details + doc comment
 llm-wiki query neighbors UserService     # what connects to it?
 llm-wiki query path Auth Database        # shortest path
+llm-wiki query community 0              # largest community
 llm-wiki query stats                     # summary
 ```
 
-## Watch for changes
+## Health check
 
 ```bash
-llm-wiki watch .      # auto-rebuild when files change
+llm-wiki lint    # orphan nodes, tiny communities, confidence breakdown
 ```
 
-## Ingest URLs
+## Keep the wiki alive
 
 ```bash
-llm-wiki add https://interesting-article.com
-llm-wiki .   # rebuild with ingested content
+llm-wiki watch .                               # auto-rebuild on changes
+llm-wiki add https://interesting-article.com   # ingest URL
+llm-wiki .                                     # rebuild (cache skips unchanged)
 ```
 
 ## Claude Code skill (optional)

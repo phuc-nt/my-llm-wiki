@@ -2,14 +2,14 @@
 layout: default
 title: Home
 nav_order: 1
-description: "my-llm-wiki — Turn any folder into a queryable knowledge graph."
+description: "my-llm-wiki — A living, queryable knowledge graph from any folder."
 permalink: /
 ---
 
 # my-llm-wiki
 {: .fs-9 }
 
-Turn any folder of code, docs, papers, or images into a queryable knowledge graph.
+Drop any files into a folder. Get a living, queryable knowledge graph.
 {: .fs-6 .fw-300 }
 
 [Get Started]({% link quick-start.md %}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
@@ -17,16 +17,34 @@ Turn any folder of code, docs, papers, or images into a queryable knowledge grap
 
 ---
 
-In April 2026, Andrej Karpathy shared a concept he called **LLM Wiki** — a personal knowledge system where you drop raw files into a folder and compile them into a structured, interlinked wiki.
+### The idea
 
-The core insight: **compile once, query forever.**
+In April 2026, Andrej Karpathy shared a concept he called **LLM Wiki** — a personal knowledge system with three layers:
 
-`my-llm-wiki` brings this to life with a single command. No vector databases, no RAG pipelines, no API keys needed for code extraction.
+1. **Raw** — your files, never modified
+2. **Compile** — structured knowledge with cross-references
+3. **Query** — ask questions without re-reading source files
+
+The key insight: **compile once, query forever.** The wiki is a persistent, compounding artifact — it grows with every session.
+
+`my-llm-wiki` implements all three layers. One command builds the graph. The living wiki cycle keeps it growing.
 
 ```bash
 pip install my-llm-wiki
-llm-wiki .
+cd your-project && llm-wiki .
 ```
+
+---
+
+### The living wiki cycle
+
+```
+Monitor → Rebuild → Lint → Write-back → Report
+   ↑                                       │
+   └───────────────────────────────────────┘
+```
+
+Each session adds knowledge. Insights get filed back. The graph compounds over time — exactly what Karpathy envisioned.
 
 ---
 
@@ -39,6 +57,7 @@ wiki-out/
   WIKI_REPORT.md   ← god nodes, surprising connections
   wiki/            ← Wikipedia-style articles
   vault/           ← markdown vault with [[wikilinks]]
+  cache/           ← SHA256 cache (skip unchanged files)
 ```
 
 See [How It Works]({% link how-it-works.md %}) for the full pipeline architecture.

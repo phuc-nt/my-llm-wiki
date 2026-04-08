@@ -183,8 +183,9 @@ Merges all extraction results into a single NetworkX graph.
 Graph (N nodes, E edges)
   │
   ├── density check:
-  │     avg_degree > 3  → resolution = 1.5 (tight, for code)
-  │     avg_degree ≤ 3  → resolution = 1.0 (broad, for docs)
+  │     avg_degree ≤ 3      → resolution = 1.0 (broad, for docs)
+  │     nodes > 5000        → resolution = 1.0 (fewer communities)
+  │     otherwise           → resolution = 1.5 (tight, for code)
   │
   ├── Leiden (if graspologic installed) or Louvain (networkx builtin)
   │
@@ -251,4 +252,54 @@ Step 2: check output
   │                           │
   ▼                           ▼
 Step 3: merge structural + semantic → rebuild graph → re-export
+```
+
+---
+
+## Doc comment extraction
+
+Automatic enrichment of AST nodes with business logic from inline docs:
+
+```
+source.java
+  │
+  ├── /** Match YHC orders with delivery data.    ← Javadoc
+  │    *  Uses 3-month sliding window.
+  │    */
+  ├── public class YhcOrderMatchingService {      ← AST node
+  │
+  └── Result:
+        node.label = "YhcOrderMatchingService"
+        node.description = "Match YHC orders with delivery data. Uses 3-month sliding window."
+```
+
+Supported: `/** */` (Java/JS/TS/PHP), `//` (Go), `///` (Rust/C#/Swift), `#` (Ruby)
+
+---
+
+## Living wiki cycle
+
+After initial build, the wiki grows with every session:
+
+```
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐  │
+│   │ Monitor  │───▶│ Rebuild  │───▶│  Lint    │  │
+│   │ (watch)  │    │ (cached) │    │ (health) │  │
+│   └──────────┘    └──────────┘    └──────────┘  │
+│        ▲                               │         │
+│        │                               ▼         │
+│   ┌──────────┐                  ┌──────────┐    │
+│   │  Report  │◀─────────────────│Write-back│    │
+│   │ (stats)  │                  │(insights)│    │
+│   └──────────┘                  └──────────┘    │
+│                                                  │
+└──────────────────────────────────────────────────┘
+
+Monitor:    llm-wiki watch .           or check mtime
+Rebuild:    llm-wiki .                 SHA256 cache skips unchanged
+Lint:       llm-wiki lint              orphans, tiny communities
+Write-back: wiki-out/ingested/*.md     insights filed as markdown
+Report:     llm-wiki query stats       track growth over time
 ```
