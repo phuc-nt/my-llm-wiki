@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import importlib
+import os
 
 _core = importlib.import_module("my_llm_wiki.extract-core")
 _read_text = _core._read_text
 _make_id = _core._make_id
+
+_DEBUG = os.environ.get("WIKI_DEBUG", "").lower() in ("1", "true", "yes")
 
 
 def _add_base(
@@ -29,7 +32,11 @@ def _add_base(
         return
     # Strip generic parameters: List<String> -> List
     base_name = base_name.split("<")[0].split("[")[0].strip()
-    if not base_name or not base_name[0].isalpha() and base_name[0] != "_":
+    if not base_name:
+        return
+    # First char must be a letter or underscore (valid identifier start)
+    first = base_name[0]
+    if not (first.isalpha() or first == "_"):
         return
 
     base_nid = _make_id(stem, base_name)
@@ -51,7 +58,8 @@ def _add_base(
 
 def extract_python_inheritance(node, source, class_nid, class_name, line, stem,
                                 nodes, edges, seen_ids, str_path) -> None:
-    """Python: class Foo(Base1, Base2, metaclass=...): → extends only."""
+    """Python: class Foo(Base1, Base2, metaclass=...): → extends only.
+    Handles: identifier, attribute (module.Class), subscript (Generic[T])."""
     args = node.child_by_field_name("superclasses")
     if not args:
         return
@@ -60,9 +68,17 @@ def extract_python_inheritance(node, source, class_nid, class_name, line, stem,
             base = _read_text(arg, source)
             _add_base(base, "extends", class_nid, line, stem, nodes, edges, seen_ids, str_path)
         elif arg.type == "attribute":
-            # module.Class → take the full qualified name
+            # module.Class → take the last segment
             base = _read_text(arg, source)
-            _add_base(base.rsplit(".", 1)[-1], "extends", class_nid, line, stem, nodes, edges, seen_ids, str_path)
+            _add_base(base.rsplit(".", 1)[-1], "extends", class_nid, line, stem,
+                      nodes, edges, seen_ids, str_path)
+        elif arg.type == "subscript":
+            # Generic[T] → take `Generic`, the value field is the base
+            value = arg.child_by_field_name("value")
+            if value:
+                base = _read_text(value, source).rsplit(".", 1)[-1]
+                _add_base(base, "extends", class_nid, line, stem,
+                          nodes, edges, seen_ids, str_path)
 
 
 def extract_java_inheritance(node, source, class_nid, class_name, line, stem,
@@ -143,7 +159,12 @@ def extract_typescript_inheritance(node, source, class_nid, class_name, line, st
 def extract_csharp_inheritance(node, source, class_nid, class_name, line, stem,
                                 nodes, edges, seen_ids, str_path) -> None:
     """C#: class Foo : Bar, IFoo, IBar { ... }
-    First entry is base class if uppercase-starts, else interface. Convention: `I` prefix = interface.
+
+    C# grammar does not distinguish class base vs interface in base_list syntactically.
+    Convention: first entry is treated as `extends` (base class), rest as `implements`.
+    This is correct for most code but imperfect — C# allows zero-or-one base class,
+    and if the class has no base (interfaces only), the first entry will be mis-tagged.
+    Users can reclassify via schema rules if needed.
     """
     for child in node.children:
         if child.type == "base_list":
@@ -152,13 +173,7 @@ def extract_csharp_inheritance(node, source, class_nid, class_name, line, stem,
                 if sub.type in ("identifier", "identifier_name", "qualified_name",
                                  "generic_name", "base_type"):
                     base = _read_text(sub, source).split("<")[0]
-                    # Convention: `I` prefix = interface, else first is class base
-                    if len(base) > 1 and base[0] == "I" and base[1].isupper():
-                        relation = "implements"
-                    elif first:
-                        relation = "extends"
-                    else:
-                        relation = "implements"
+                    relation = "extends" if first else "implements"
                     _add_base(base, relation, class_nid, line, stem, nodes, edges, seen_ids, str_path)
                     first = False
 
@@ -251,8 +266,20 @@ _DISPATCH = {
 
 def extract_inheritance(ts_module, node, source, class_nid, class_name, line,
                          stem, nodes, edges, seen_ids, str_path) -> None:
-    """Dispatch to the language-specific inheritance extractor."""
+    """Dispatch to the language-specific inheritance extractor.
+
+    Failures are swallowed — inheritance is best-effort; losing it should not
+    prevent the rest of file extraction from succeeding.
+    """
     handler = _DISPATCH.get(ts_module)
-    if handler:
+    if not handler:
+        return
+    try:
         handler(node, source, class_nid, class_name, line, stem,
                 nodes, edges, seen_ids, str_path)
+    except Exception as exc:
+        if _DEBUG:
+            import sys
+            print(f"[wiki] inheritance handler failed for {class_name} in {str_path}: {exc}",
+                  file=sys.stderr)
+        # best-effort: skip inheritance for this class, continue extraction

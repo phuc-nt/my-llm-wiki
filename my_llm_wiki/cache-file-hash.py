@@ -10,13 +10,19 @@ from pathlib import Path
 from my_llm_wiki.constants import OUTPUT_DIR
 
 
+# Bump this when extraction output format changes (e.g., new fields like 'signature').
+# Old cache entries without this version are treated as stale and re-extracted.
+_CACHE_VERSION = 2
+
+
 def file_hash(path: Path) -> str:
-    """SHA256 of file contents + resolved path. Prevents cache collisions on identical content."""
+    """SHA256 of file contents + resolved path + cache version."""
     p = Path(path)
     h = hashlib.sha256()
     h.update(p.read_bytes())
     h.update(b"\x00")
     h.update(str(p.resolve()).encode())
+    h.update(f"\x00v{_CACHE_VERSION}".encode())
     return h.hexdigest()
 
 

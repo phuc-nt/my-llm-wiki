@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import importlib
+import os
 import re
 
 _core = importlib.import_module("my_llm_wiki.extract-core")
 _read_text = _core._read_text
+
+_DEBUG = os.environ.get("WIKI_DEBUG", "").lower() in ("1", "true", "yes")
 
 
 _MAX_SIG_LEN = 200  # truncate very long signatures
@@ -18,9 +21,12 @@ def _clean(text: str) -> str:
 
 
 def _truncate(sig: str) -> str:
+    """Truncate long signatures with ellipsis. Preserves display — does not try
+    to produce balanced parens; rendering code should treat this as display text only.
+    """
     if len(sig) <= _MAX_SIG_LEN:
         return sig
-    return sig[:_MAX_SIG_LEN].rsplit(",", 1)[0] + ", ...)"
+    return sig[:_MAX_SIG_LEN - 3] + "..."
 
 
 def extract_python_signature(func_node, source) -> str:
@@ -188,5 +194,9 @@ def extract_signature(ts_module, func_node, source) -> str:
         return ""
     try:
         return handler(func_node, source)
-    except Exception:
+    except Exception as exc:
+        if _DEBUG:
+            import sys
+            print(f"[wiki] signature extraction failed in {ts_module}: {exc}",
+                  file=sys.stderr)
         return ""
