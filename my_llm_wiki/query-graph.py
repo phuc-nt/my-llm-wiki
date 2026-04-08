@@ -67,6 +67,8 @@ def cmd_node(G: nx.Graph, label: str) -> str:
             f"    source: {d.get('source_file', '')} {d.get('source_location', '')}",
             f"    type: {d.get('file_type', '')}  community: {d.get('community', '')}  degree: {G.degree(nid)}",
         ]
+        if d.get("description"):
+            lines.append(f"    doc: {d['description']}")
     return "\n".join(lines)
 
 
