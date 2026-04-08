@@ -16,7 +16,7 @@
 
 ---
 
-In April 2026, Andrej Karpathy [described a concept](https://x.com/karpathy/status/1909380524543902036) he called **LLM Wiki** — a personal knowledge system with three layers: raw files (never modified), a compiled wiki with cross-references, and a query layer that answers questions without re-reading sources. The key insight: **compile once, query forever**, and let the wiki grow with every session as a "persistent, compounding artifact".
+In April 2026, Andrej Karpathy [shared a concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) he called **LLM Wiki** — a personal knowledge system with three layers: raw files (never modified), a compiled wiki with cross-references, and a schema that tells the LLM how to maintain it. The key insight: **compile once, query forever**, and let the wiki grow with every session as a "persistent, compounding artifact" rather than re-deriving knowledge on every query.
 
 `my-llm-wiki` implements all three layers. See [How It's Built](https://phuc-nt.github.io/my-llm-wiki/why.html) for the full narrative on how Karpathy's vision is realized.
 
