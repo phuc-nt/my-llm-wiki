@@ -16,31 +16,54 @@
 
 ---
 
-Inspired by [Andrej Karpathy's LLM Wiki concept](https://x.com/karpathy/status/1909380524543902036): **compile once, query forever.** The wiki grows with every session.
+In April 2026, Andrej Karpathy [described a concept](https://x.com/karpathy/status/1909380524543902036) he called **LLM Wiki** — a personal knowledge system with three layers: raw files (never modified), a compiled wiki with cross-references, and a query layer that answers questions without re-reading sources. The key insight: **compile once, query forever**, and let the wiki grow with every session as a "persistent, compounding artifact".
+
+`my-llm-wiki` implements all three layers. See [How It's Built](https://phuc-nt.github.io/my-llm-wiki/why.html) for the full narrative on how Karpathy's vision is realized.
 
 ```bash
 pip install my-llm-wiki
 cd your-project && llm-wiki .
 ```
 
-### What it does
+### The Living Wiki
+
+One command builds the graph. The living wiki cycle keeps it growing over time — each session adds knowledge, insights get filed back, the graph compounds.
 
 ```
-your-files/ → detect → extract → cross-ref → build → cluster → export
-                                                        ↓
-                                              wiki-out/graph.html
-                                              wiki-out/graph.json
-                                              wiki-out/WIKI_REPORT.md
-                                              wiki-out/wiki/
-                                              wiki-out/vault/
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐  │
+│   │ Monitor  │───▶│ Rebuild  │───▶│  Lint    │  │
+│   │ (watch)  │    │ (cached) │    │ (health) │  │
+│   └──────────┘    └──────────┘    └──────────┘  │
+│        ▲                               │         │
+│        │                               ▼         │
+│   ┌──────────┐                  ┌──────────┐    │
+│   │  Report  │◀─────────────────│Write-back│    │
+│   │ (stats)  │                  │(insights)│    │
+│   └──────────┘                  └──────────┘    │
+│                                                  │
+└──────────────────────────────────────────────────┘
 ```
 
-### Two-pass extraction
+Two passes extract knowledge from any file type:
 
 | Pass | What | Cost |
 |------|------|------|
 | **Structural** | AST (18 languages), doc comments (Javadoc/JSDoc/GoDoc), headings, cross-ref | Free |
 | **Semantic** | Claude Code agents read DOCX, scanned PDFs, images with vision | Claude tokens |
+
+Output goes to `wiki-out/`:
+
+```
+wiki-out/
+  graph.html       ← interactive graph (vis.js)
+  graph.json       ← persistent graph data
+  WIKI_REPORT.md   ← god nodes, surprising connections
+  wiki/            ← Wikipedia-style articles
+  vault/           ← markdown vault with [[wikilinks]]
+  cache/           ← SHA256 cache (skip unchanged files)
+```
 
 ### CLI
 
@@ -54,16 +77,6 @@ llm-wiki watch .                    # auto-rebuild on changes
 llm-wiki add <url>                  # ingest URL
 ```
 
-### Living Wiki
-
-The graph is a persistent, compounding artifact — it grows with every session:
-
-```
-Monitor → Rebuild → Lint → Write-back → Report
-   ↑                                       │
-   └───────────────────────────────────────┘
-```
-
 ### Claude Code Skill
 
 ```bash
@@ -71,7 +84,7 @@ mkdir -p ~/.claude/skills/my-llm-wiki
 cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
 ```
 
-Then `/wiki .` — structural extraction + agent-mode semantic extraction for DOCX, scanned PDFs, images.
+Then `/wiki .` in Claude Code — structural extraction + agent-mode semantic extraction for DOCX, scanned PDFs, images.
 
 ### Docs
 
