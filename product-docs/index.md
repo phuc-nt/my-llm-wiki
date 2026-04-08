@@ -12,8 +12,8 @@ permalink: /
 Drop any files into a folder. Get a living, queryable knowledge graph.
 {: .fs-6 .fw-300 }
 
-[Get Started]({% link quick-start.md %}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Why LLM Wiki]({% link why.md %}){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Get Started]({{ site.baseurl }}/quick-start.html){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Why LLM Wiki]({{ site.baseurl }}/why.html){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
@@ -60,4 +60,4 @@ wiki-out/
   cache/           ← SHA256 cache (skip unchanged files)
 ```
 
-See [How It Works]({% link how-it-works.md %}) for the full pipeline architecture.
+See [How It Works]({{ site.baseurl }}/how-it-works.html) for the full pipeline architecture.
