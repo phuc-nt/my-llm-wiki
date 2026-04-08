@@ -2,7 +2,7 @@
 
 Turn any folder of code, docs, papers, or images into a queryable knowledge graph.
 
-Drop raw files → compile once → query forever. Inspired by Karpathy's LLM Wiki concept.
+Drop raw files → compile once → query forever. The wiki grows with every session.
 
 ---
 
@@ -18,9 +18,9 @@ llm-wiki .
 
 Read the summary output. Note file counts and edge counts per type.
 
-**Code** gets full AST extraction — no agent needed.
-**Markdown/text** gets headings, definitions, cross-doc links — usually sufficient.
-**DOCX, scanned PDFs, images** get hub nodes only — proceed to Step 2.
+- **Code** → full AST + doc comments (Javadoc, JSDoc, GoDoc, `///`). No agent needed.
+- **Markdown/text** → headings, definitions, cross-doc links. Usually sufficient.
+- **DOCX, scanned PDFs, images** → hub nodes only. Proceed to Step 2.
 
 ### Step 2 — Semantic extraction (agent mode)
 
@@ -77,15 +77,93 @@ print(f'Enhanced: {G.number_of_nodes()} nodes · {G.number_of_edges()} edges · 
 "
 ```
 
-### Step 4 — Report
+### Step 4 — Health check
+
+```bash
+llm-wiki lint
+```
+
+Reports orphan nodes, tiny communities, confidence breakdown. Fix issues before proceeding.
+
+### Step 5 — Report
 
 Print node/edge/community counts. Offer to answer questions using `llm-wiki query`.
 
 ---
 
-## Querying
+## Living Wiki Mode
+
+Karpathy's vision: wiki is a **persistent, compounding artifact** — it grows with every session.
+
+After initial build, follow this cycle:
+
+```
+Monitor → Rebuild → Lint → Write-back → Report
+   ↑                                       │
+   └───────────────────────────────────────┘
+```
+
+### Monitor — detect changes
 
 ```bash
+# Check what changed since last build
+LAST=$(stat -f %m wiki-out/graph.json 2>/dev/null || echo 0)
+CHANGED=$(find . -name "*.py" -o -name "*.java" -o -name "*.md" -newer wiki-out/graph.json | wc -l)
+echo "$CHANGED files changed since last build"
+```
+
+Or use continuous watch: `llm-wiki watch .`
+
+### Rebuild — update graph
+
+```bash
+llm-wiki .   # SHA256 cache skips unchanged files
+```
+
+### Lint — check health
+
+```bash
+llm-wiki lint
+```
+
+If orphans or high ambiguity found, investigate and fix.
+
+### Write-back — file insights into the graph
+
+After answering a question or discovering something, write it back:
+
+```bash
+# Save insight as markdown for next rebuild
+mkdir -p wiki-out/ingested
+cat > wiki-out/ingested/insight_$(date +%Y%m%d).md << 'EOF'
+---
+type: insight
+date: 2026-04-08
+---
+# GraphStore connects to MemoryStore via shared SQLite connection
+Discovered during debugging session. The connection pool is shared,
+which means GraphStore operations can block MemoryStore queries.
+EOF
+
+# Rebuild to include the insight
+llm-wiki .
+```
+
+### Report — track growth
+
+```bash
+llm-wiki query stats   # current size
+llm-wiki lint          # health
+```
+
+---
+
+## CLI Reference
+
+```bash
+llm-wiki .                          # build graph
+llm-wiki /path/to/folder            # build from specific path
+llm-wiki --no-viz .                 # skip HTML viz (large graphs)
 llm-wiki query search <terms>       # keyword search
 llm-wiki query node <label>         # node details
 llm-wiki query neighbors <label>    # direct connections
@@ -93,17 +171,11 @@ llm-wiki query community <id>       # list community members
 llm-wiki query path <A> <B>         # shortest path
 llm-wiki query gods                 # most connected nodes
 llm-wiki query stats                # summary statistics
-```
-
-For natural language questions: read `wiki-out/WIKI_REPORT.md` for overview, use `llm-wiki query` for specifics.
-
----
-
-## Other Commands
-
-```bash
-llm-wiki watch .                    # auto-rebuild on file changes
-llm-wiki add <url>                  # fetch URL, save as markdown
+llm-wiki lint                       # graph health check
+llm-wiki watch .                    # auto-rebuild on changes
+llm-wiki add <url>                  # fetch URL as markdown
+llm-wiki --version                  # show version
+llm-wiki --help                     # show help
 ```
 
 ---
@@ -112,7 +184,7 @@ llm-wiki add <url>                  # fetch URL, save as markdown
 
 | File Type | Structural | + Agent | Verdict |
 |-----------|-----------|---------|---------|
-| Code | Full AST | — | Skip agent |
+| Code (18 langs) | Full AST + doc comments | — | Skip agent |
 | Markdown | Headings + links | 2x entities | Optional |
 | DOCX | Hub nodes only | 30x entities | **Use agent** |
 | Scanned PDF | 0 text | 85x entities | **Use agent** |
