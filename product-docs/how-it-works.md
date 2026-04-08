@@ -256,6 +256,78 @@ Step 3: merge structural + semantic → rebuild graph → re-export
 
 ---
 
+## Typed inheritance extraction
+
+```
+source.java
+  │
+  ├── class UserRepository extends BaseEntity
+  │                       implements Repository, Comparable
+  │
+  ├── tree-sitter AST:
+  │     class_declaration
+  │       ├── superclass → BaseEntity          ← extends
+  │       └── super_interfaces → type_list:
+  │             ├── Repository                  ← implements
+  │             └── Comparable                  ← implements
+  │
+  └── Graph edges:
+        UserRepository --extends--> BaseEntity
+        UserRepository --implements--> Repository
+        UserRepository --implements--> Comparable
+```
+
+Per-language dispatch in `extract-inheritance.py`:
+
+| Language | Grammar field | Generates |
+|----------|---------------|-----------|
+| Java | `superclass` + `super_interfaces` | extends + implements |
+| Python | `superclasses` | extends (handles `Generic[T]` subscript) |
+| TypeScript | `class_heritage → extends_clause / implements_clause` | extends + implements |
+| Kotlin | `delegation_specifiers → delegation_specifier` | extends |
+| C# | `base_list` (first=extends, rest=implements) | extends + implements |
+| C++ | `base_class_clause` | extends |
+| PHP | `base_clause` + `class_interface_clause` | extends + implements |
+| Scala | `extends_clause` (first=extends, `with T`=implements) | extends + implements |
+| Swift | `inheritance_specifier` | extends |
+| Ruby | `superclass` field | extends |
+
+Query example:
+
+```bash
+llm-wiki query neighbors Serializable
+# → lists all classes implementing Serializable
+```
+
+---
+
+## Function signature extraction
+
+```
+source.py
+  │
+  ├── def process(order: Order, user: User) -> Result:
+  │
+  ├── tree-sitter AST:
+  │     function_definition
+  │       ├── name: process
+  │       ├── parameters: (order: Order, user: User)
+  │       └── return_type: Result
+  │
+  └── Node enrichment:
+        {
+          id: "orders_process",
+          label: "process()",
+          signature: "(order: Order, user: User) -> Result"
+        }
+```
+
+Truncation: signatures longer than 200 chars end with `...`.
+Failures: handler exceptions caught, node still gets created without signature.
+Debug mode: `WIKI_DEBUG=1 llm-wiki .` prints skipped extractions to stderr.
+
+---
+
 ## Doc comment extraction
 
 Automatic enrichment of AST nodes with business logic from inline docs:

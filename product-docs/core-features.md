@@ -13,7 +13,12 @@ description: "Two-pass extraction, doc comments, cross-referencing, community de
 
 Runs with `llm-wiki .`:
 
-- **Code** (18 languages) — tree-sitter AST + doc comments (Javadoc, JSDoc, GoDoc, `///`)
+- **Code** (18 languages) — tree-sitter AST with rich metadata:
+  - Classes, functions, methods, imports
+  - **Typed inheritance edges**: `extends` (base class) and `implements` (interface)
+  - **Function signatures**: parameters + return types preserved verbatim
+  - Doc comments (Javadoc, JSDoc, GoDoc, `///`)
+  - Call graph (function-to-function calls)
 - **Markdown/text** — headings, definitions, cross-document links
 - **DOCX/PDF** — converted to text, then parsed
 - **Images** — hub nodes (content needs agent mode)
@@ -30,6 +35,51 @@ Runs in Claude Code via `/wiki .`. Dispatches subagents for files structural can
 | DOCX | Hub nodes only | **30x entities** | Use agent |
 | Scanned PDF | 0 text | **85x entities** | Use agent |
 | Images (HEIC/PNG/JPG) | Hub nodes only | **Vision OCR** | Use agent |
+
+### Typed inheritance edges
+
+Instead of a single generic `inherits` relation, the graph distinguishes:
+
+- **`extends`** — class inherits from a base class
+- **`implements`** — class conforms to an interface/protocol/trait
+
+Languages supported for typed inheritance:
+
+| Language | `extends` | `implements` | Notes |
+|----------|-----------|-------------|-------|
+| Java | ✅ | ✅ | First-class grammar support |
+| Python | ✅ | — | Single concept, handles `Generic[T]` |
+| TypeScript | ✅ | ✅ | Separate `extends`/`implements` clauses |
+| Kotlin | ✅ | — | `:` delegation_specifiers |
+| C# | ✅ | ✅ | First entry = extends, rest = implements |
+| C++ | ✅ | — | `: public Base` |
+| Ruby | ✅ | — | `< Base` (mixins need agent mode) |
+| PHP | ✅ | ✅ | Separate clauses |
+| Scala | ✅ | ✅ | First = extends, `with Trait` = implements |
+| Swift | ✅ | — | Class base + protocol conformance merged |
+
+Query: `llm-wiki query neighbors Serializable` → shows all classes implementing it.
+
+---
+
+### Function signatures
+
+Every function/method node carries a `signature` field with params and return type:
+
+```
+llm-wiki query node processOrder
+  processOrder()
+    source: src/orders.ts L45
+    type: code  community: 3  degree: 8
+    signature: (order: Order, user: User): Promise<Result>
+    doc: Process an order for the given user. Returns result or throws.
+```
+
+Signature extraction supports: Python, TypeScript, JavaScript, Java, Kotlin, C#, C++, Ruby, PHP, Scala, Swift. Works with generic parameters, default values, nullable types.
+
+Test result on Python codebase (kioku): **529 / 991 code nodes have signatures** (54% coverage — classes and untyped functions have no signature).
+
+---
 
 ### Doc comment extraction
 

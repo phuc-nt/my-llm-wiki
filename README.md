@@ -50,7 +50,7 @@ Two passes extract knowledge from any file type:
 
 | Pass | What | Cost |
 |------|------|------|
-| **Structural** | AST (18 languages), doc comments (Javadoc/JSDoc/GoDoc), headings, cross-ref | Free |
+| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref | Free |
 | **Semantic** | Claude Code agents read DOCX, scanned PDFs, images with vision | Claude tokens |
 
 Output goes to `wiki-out/`:
