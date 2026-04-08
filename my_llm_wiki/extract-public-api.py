@@ -124,7 +124,8 @@ def extract(paths: list[Path]) -> dict:
     except Exception:
         root = Path(".")
 
-    for path in paths:
+    total = len(paths)
+    for i, path in enumerate(paths, 1):
         extractor = _DISPATCH.get(path.suffix)
         if extractor is None:
             continue
@@ -132,10 +133,17 @@ def extract(paths: list[Path]) -> dict:
         if cached is not None:
             per_file.append(cached)
             continue
+        # Progress indicator for large codebases
+        if total > 50 and i % 50 == 0:
+            import sys
+            print(f"\r[wiki] AST: {i}/{total} files ({i*100//total}%)", end="", flush=True, file=sys.stderr)
         result = extractor(path)
         if "error" not in result:
             save_cached(path, result, root)
         per_file.append(result)
+    if total > 50:
+        import sys
+        print(f"\r[wiki] AST: {total}/{total} (100%)          ", file=sys.stderr)
 
     all_nodes: list[dict] = []
     all_edges: list[dict] = []
@@ -147,6 +155,13 @@ def extract(paths: list[Path]) -> dict:
     py_paths = [p for p in paths if p.suffix == ".py"]
     py_results = [r for r, p in zip(per_file, paths) if p.suffix == ".py"]
     all_edges.extend(resolve_cross_file_imports(py_results, py_paths))
+
+    # Enrich nodes with doc comments (Javadoc, JSDoc, GoDoc, etc.)
+    try:
+        _doc_comments = importlib.import_module("my_llm_wiki.extract-doc-comments")
+        _doc_comments.enrich_nodes_with_comments(all_nodes, all_edges, paths)
+    except Exception:
+        pass
 
     return {"nodes": all_nodes, "edges": all_edges, "input_tokens": 0, "output_tokens": 0}
 

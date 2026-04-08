@@ -13,6 +13,7 @@ my-llm-wiki v{_VERSION} — turn any folder into a queryable knowledge graph
 Usage:
   llm-wiki [path]                    Build graph (default: current dir)
   llm-wiki query <command> [args]    Query the built graph
+  llm-wiki lint                      Graph health check
   llm-wiki watch [path] [interval]   Auto-rebuild on file changes
   llm-wiki add <url> [--author name] Fetch URL, save as markdown
 
@@ -49,6 +50,52 @@ def main() -> None:
         watch_target = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(".")
         interval = int(sys.argv[3]) if len(sys.argv) > 3 else 5
         _watch.watch(watch_target, interval)
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "lint":
+        import importlib
+        import json
+        from networkx.readwrite import json_graph
+        graph_path = Path("wiki-out/graph.json")
+        if not graph_path.exists():
+            print("[wiki] No graph found. Run `llm-wiki .` first.")
+            sys.exit(1)
+        import networkx as nx
+        data = json.loads(graph_path.read_text(encoding="utf-8"))
+        G = json_graph.node_link_graph(data, edges="links")
+        n, e = G.number_of_nodes(), G.number_of_edges()
+        # Orphans: nodes with 0 edges
+        orphans = [nid for nid in G.nodes() if G.degree(nid) == 0]
+        # Confidence breakdown
+        confs = [d.get("confidence", "EXTRACTED") for _, _, d in G.edges(data=True)]
+        total_e = len(confs) or 1
+        ext_pct = round(confs.count("EXTRACTED") / total_e * 100)
+        inf_pct = round(confs.count("INFERRED") / total_e * 100)
+        amb_pct = round(confs.count("AMBIGUOUS") / total_e * 100)
+        # Communities
+        _analyze = importlib.import_module("my_llm_wiki.analyze-graph")
+        communities = {}
+        for nid, d in G.nodes(data=True):
+            cid = d.get("community")
+            if cid is not None:
+                communities.setdefault(int(cid), []).append(nid)
+        tiny = [cid for cid, members in communities.items() if len(members) <= 2]
+        # Report
+        print(f"Wiki Health Check")
+        print(f"  Nodes: {n} · Edges: {e} · Communities: {len(communities)}")
+        print(f"  Confidence: {ext_pct}% EXTRACTED · {inf_pct}% INFERRED · {amb_pct}% AMBIGUOUS")
+        if orphans:
+            print(f"  Orphan nodes (no edges): {len(orphans)}")
+            for o in orphans[:5]:
+                print(f"    - {G.nodes[o].get('label', o)}")
+            if len(orphans) > 5:
+                print(f"    ... and {len(orphans) - 5} more")
+        else:
+            print(f"  No orphan nodes")
+        if tiny:
+            print(f"  Tiny communities (<=2 nodes): {len(tiny)}")
+        if amb_pct > 10:
+            print(f"  High ambiguity ({amb_pct}%) — review AMBIGUOUS edges")
         return
 
     if len(sys.argv) > 1 and sys.argv[1] == "add":
