@@ -10,9 +10,10 @@ import networkx as nx
 _DEFAULT_SCHEMA = {
     "entity_types": ["code", "document", "paper", "image"],
     "relation_types": [
-        "contains", "imports", "calls", "uses", "references",
+        "contains", "imports", "imports_from", "calls", "uses", "references",
         "defines", "explains", "related_to", "mentions",
         "same_concept", "rationale_for", "method",
+        "extends", "implements", "inherits",  # typed inheritance (inherits = legacy alias)
     ],
     "required_fields": ["id", "label", "file_type", "source_file"],
 }

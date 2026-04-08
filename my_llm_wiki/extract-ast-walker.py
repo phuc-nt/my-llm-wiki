@@ -7,6 +7,8 @@ from pathlib import Path
 _core = importlib.import_module("my_llm_wiki.extract-core")
 _cg = importlib.import_module("my_llm_wiki.extract-call-graph")
 _cfgs = importlib.import_module("my_llm_wiki.extract-language-configs")
+_inherit = importlib.import_module("my_llm_wiki.extract-inheritance")
+_sigs = importlib.import_module("my_llm_wiki.extract-signatures")
 
 _make_id = _core._make_id
 _read_text = _core._read_text
@@ -15,6 +17,9 @@ LanguageConfig = _core.LanguageConfig
 
 build_label_index = _cg.build_label_index
 walk_calls = _cg.walk_calls
+
+extract_inheritance = _inherit.extract_inheritance
+extract_signature = _sigs.extract_signature
 
 _js_extra_walk = _cfgs._js_extra_walk
 _csharp_extra_walk = _cfgs._csharp_extra_walk
@@ -52,13 +57,16 @@ def _extract_generic(path: Path, config: LanguageConfig) -> dict:
     seen_ids: set[str] = set()
     function_bodies: list[tuple[str, object]] = []
 
-    def add_node(nid: str, label: str, line: int) -> None:
+    def add_node(nid: str, label: str, line: int, signature: str = "") -> None:
         if nid not in seen_ids:
             seen_ids.add(nid)
-            nodes.append({
+            node = {
                 "id": nid, "label": label, "file_type": "code",
                 "source_file": str_path, "source_location": f"L{line}",
-            })
+            }
+            if signature:
+                node["signature"] = signature
+            nodes.append(node)
 
     def add_edge(src: str, tgt: str, relation: str, line: int,
                  confidence: str = "EXTRACTED", weight: float = 1.0) -> None:
@@ -94,41 +102,11 @@ def _extract_generic(path: Path, config: LanguageConfig) -> dict:
             add_node(class_nid, class_name, line)
             add_edge(file_nid, class_nid, "contains", line)
 
-            # Python-specific: inheritance
-            if config.ts_module == "tree_sitter_python":
-                args = node.child_by_field_name("superclasses")
-                if args:
-                    for arg in args.children:
-                        if arg.type == "identifier":
-                            base = _read_text(arg, source)
-                            base_nid = _make_id(stem, base)
-                            if base_nid not in seen_ids:
-                                base_nid = _make_id(base)
-                                if base_nid not in seen_ids:
-                                    nodes.append({
-                                        "id": base_nid, "label": base, "file_type": "code",
-                                        "source_file": "", "source_location": "",
-                                    })
-                                    seen_ids.add(base_nid)
-                            add_edge(class_nid, base_nid, "inherits", line)
-
-            # Swift-specific: conformance / inheritance
-            if config.ts_module == "tree_sitter_swift":
-                for child in node.children:
-                    if child.type == "inheritance_specifier":
-                        for sub in child.children:
-                            if sub.type in ("user_type", "type_identifier"):
-                                base = _read_text(sub, source)
-                                base_nid = _make_id(stem, base)
-                                if base_nid not in seen_ids:
-                                    base_nid = _make_id(base)
-                                    if base_nid not in seen_ids:
-                                        nodes.append({
-                                            "id": base_nid, "label": base, "file_type": "code",
-                                            "source_file": "", "source_location": "",
-                                        })
-                                        seen_ids.add(base_nid)
-                                add_edge(class_nid, base_nid, "inherits", line)
+            # Extract extends/implements edges (per-language dispatch)
+            extract_inheritance(
+                config.ts_module, node, source, class_nid, class_name, line,
+                stem, nodes, edges, seen_ids, str_path,
+            )
 
             body = _find_body(node, config)
             if body:
@@ -159,13 +137,14 @@ def _extract_generic(path: Path, config: LanguageConfig) -> dict:
                 return
 
             line = node.start_point[0] + 1
+            signature = extract_signature(config.ts_module, node, source)
             if parent_class_nid:
                 func_nid = _make_id(parent_class_nid, func_name)
-                add_node(func_nid, f".{func_name}()", line)
+                add_node(func_nid, f".{func_name}()", line, signature)
                 add_edge(parent_class_nid, func_nid, "method", line)
             else:
                 func_nid = _make_id(stem, func_name)
-                add_node(func_nid, f"{func_name}()", line)
+                add_node(func_nid, f"{func_name}()", line, signature)
                 add_edge(file_nid, func_nid, "contains", line)
 
             body = _find_body(node, config)
