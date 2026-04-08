@@ -44,6 +44,8 @@ def __getattr__(name: str):
         "cross_reference": ("my_llm_wiki.extract-cross-reference", "cross_reference"),
         # url ingest
         "ingest": ("my_llm_wiki.ingest-url", "ingest"),
+        # note write-back
+        "write_note": ("my_llm_wiki.note-writer", "write_note"),
         # file watcher
         "watch": ("my_llm_wiki.watch-folder", "watch"),
         # schema

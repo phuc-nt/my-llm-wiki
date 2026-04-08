@@ -130,23 +130,45 @@ If orphans or high ambiguity found, investigate and fix.
 
 ### Write-back — file insights into the graph
 
-After answering a question or discovering something, write it back:
+**This is the Karpathy compounding-artifact loop.** Every session should grow the wiki with what you learn. Use `llm-wiki note` — it writes a timestamped markdown file into `wiki-out/ingested/` that the next rebuild will ingest automatically.
 
 ```bash
-# Save insight as markdown for next rebuild
-mkdir -p wiki-out/ingested
-cat > wiki-out/ingested/insight_$(date +%Y%m%d).md << 'EOF'
----
-type: insight
-date: 2026-04-08
----
-# GraphStore connects to MemoryStore via shared SQLite connection
-Discovered during debugging session. The connection pool is shared,
-which means GraphStore operations can block MemoryStore queries.
-EOF
+llm-wiki note "<insight text>" [--link <node>] [--tag <tag>] [--title <heading>]
+```
 
-# Rebuild to include the insight
-llm-wiki .
+**When to call it (be proactive — don't wait to be asked):**
+
+| Situation | Example |
+|-----------|---------|
+| You explained *why* something works a non-obvious way | `llm-wiki note "GraphStore uses SHA256 because cache needs stable hash across runs" --link GraphStore --tag rationale` |
+| You made an architectural decision with the user | `llm-wiki note "Chose Leiden over Louvain for sparse-graph quality" --link cluster --tag decision` |
+| You diagnosed a bug that revealed a hidden constraint | `llm-wiki note "Cache invalidation requires version bump on schema change" --link cache --tag incident` |
+| The user said "remember this" / "good point" / "write that down" | Always capture |
+| You discovered a non-obvious link between modules | `llm-wiki note "AuthMiddleware depends on RedisClient indirectly via SessionStore" --link AuthMiddleware --link RedisClient` |
+
+**What NOT to capture** — skip noise:
+
+- Tool output, error messages, raw logs
+- Trivial facts already derivable from code (function signatures, file paths)
+- Ephemeral task state ("I'm about to refactor X")
+- Things already documented in README/docs
+- Your own commentary about what you did ("I fixed the bug")
+
+**Rules of thumb:**
+
+- One insight per note. Don't batch unrelated ideas.
+- Write the *why*, not the *what*. The code already shows what.
+- Always `--link` to the relevant code/doc node if you know its label — this creates a `mentions` edge on the next rebuild.
+- Keep it terse. One or two sentences usually suffices.
+- After capturing a batch of notes, rebuild: `llm-wiki .`
+
+**Alternative** — for pre-formatted multi-line content, pipe via stdin:
+
+```bash
+cat << 'EOF' | llm-wiki note --link GraphStore --tag decision --title "Storage format"
+The graph is serialized as node-link JSON (not GraphML or GEXF).
+Reason: simpler round-trip with NetworkX and smaller on disk.
+EOF
 ```
 
 ### Report — track growth
@@ -174,6 +196,7 @@ llm-wiki query stats                # summary statistics
 llm-wiki lint                       # graph health check
 llm-wiki watch .                    # auto-rebuild on changes
 llm-wiki add <url>                  # fetch URL as markdown
+llm-wiki note <text>                # file an insight for next rebuild
 llm-wiki --version                  # show version
 llm-wiki --help                     # show help
 ```

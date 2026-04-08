@@ -135,9 +135,29 @@ llm-wiki query stats                # summary
 llm-wiki lint                       # health check
 llm-wiki watch .                    # auto-rebuild on changes
 llm-wiki add <url>                  # fetch URL as markdown
+llm-wiki note "<insight>" [--link <node>] [--tag <tag>]   # write-back insight
 llm-wiki --no-viz .                 # skip HTML for large graphs
 llm-wiki --version                  # show version
 ```
+
+---
+
+## Write-back from LLM sessions
+
+Karpathy's vision is a **compounding artifact** — the wiki grows with every session. `llm-wiki note` closes the loop:
+
+```bash
+llm-wiki note "GraphStore uses SHA256 because cache needs stable hash across runs" \
+    --link GraphStore --tag rationale
+```
+
+The note is saved to `wiki-out/ingested/note-<timestamp>-<slug>.md` with YAML frontmatter (type, date, tags, links). On the next `llm-wiki .` rebuild:
+
+1. The note file is picked up like any other markdown
+2. `[[WikiLinks]]` in the body become `mentions` edges to existing nodes
+3. The insight is searchable via `llm-wiki query search <term>`
+
+**Claude Code integration**: SKILL.md instructs agents to call `llm-wiki note` proactively when they explain non-obvious rationale, make architectural decisions, or discover hidden constraints. One insight per note, written as *why* not *what*. See SKILL.md → Write-back section for the full heuristics.
 
 ---
 

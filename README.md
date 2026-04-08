@@ -75,6 +75,7 @@ llm-wiki query path <A> <B>         # shortest path
 llm-wiki lint                       # graph health check
 llm-wiki watch .                    # auto-rebuild on changes
 llm-wiki add <url>                  # ingest URL
+llm-wiki note "<insight>"           # write-back from LLM session
 ```
 
 ### Claude Code Skill

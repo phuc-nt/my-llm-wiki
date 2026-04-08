@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-_VERSION = "0.4.0"
+_VERSION = "0.5.0"
 
 _HELP = f"""\
 my-llm-wiki v{_VERSION} — turn any folder into a queryable knowledge graph
@@ -16,10 +16,16 @@ Usage:
   llm-wiki lint                      Graph health check
   llm-wiki watch [path] [interval]   Auto-rebuild on file changes
   llm-wiki add <url> [--author name] Fetch URL, save as markdown
+  llm-wiki note <text> [opts]        File an insight into wiki-out/ingested/
 
 Query commands:
   search <terms>   node <label>      neighbors <label>
   community <id>   path <A> <B>      gods     stats
+
+Note options:
+  --link <label>   Link to an existing node (repeatable)
+  --tag <name>     Tag the insight (repeatable)
+  --title <text>   Custom heading (default: first line of text)
 
 Options:
   --version        Show version
@@ -96,6 +102,48 @@ def main() -> None:
             print(f"  Tiny communities (<=2 nodes): {len(tiny)}")
         if amb_pct > 10:
             print(f"  High ambiguity ({amb_pct}%) — review AMBIGUOUS edges")
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "note":
+        from my_llm_wiki import write_note
+        note_args = sys.argv[2:]
+        if not note_args:
+            print("Usage: llm-wiki note <text> [--link <label>] [--tag <name>] [--title <text>]")
+            sys.exit(1)
+        # Parse flags; remaining positional tokens form the note text
+        links: list[str] = []
+        tags: list[str] = []
+        title: str | None = None
+        text_parts: list[str] = []
+        i = 0
+        while i < len(note_args):
+            tok = note_args[i]
+            if tok == "--link" and i + 1 < len(note_args):
+                links.append(note_args[i + 1])
+                i += 2
+            elif tok == "--tag" and i + 1 < len(note_args):
+                tags.append(note_args[i + 1])
+                i += 2
+            elif tok == "--title" and i + 1 < len(note_args):
+                title = note_args[i + 1]
+                i += 2
+            else:
+                text_parts.append(tok)
+                i += 1
+        text = " ".join(text_parts).strip()
+        # Fall back to stdin if no positional text (for piped input)
+        if not text and not sys.stdin.isatty():
+            text = sys.stdin.read().strip()
+        if not text:
+            print("[wiki] Note text is empty. Provide text as arg or pipe via stdin.")
+            sys.exit(1)
+        try:
+            path = write_note(text, title=title, links=links or None, tags=tags or None)
+        except ValueError as e:
+            print(f"[wiki] {e}")
+            sys.exit(1)
+        print(f"[wiki] Note saved: {path}")
+        print("[wiki] Run `llm-wiki .` to fold it into the graph.")
         return
 
     if len(sys.argv) > 1 and sys.argv[1] == "add":
