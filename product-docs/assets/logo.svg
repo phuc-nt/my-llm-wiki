@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" role="img" aria-label="my-llm-wiki logo">
+  <title>my-llm-wiki</title>
+
+  <ellipse cx="100" cy="214" rx="70" ry="8" fill="rgba(0,0,0,0.1)" />
+
+  <!-- Raw layer (bottom) — your original files, never modified -->
+  <polygon points="100,110 180,150 100,190 20,150" fill="#1e1e1e" />
+  <polygon points="20,150 100,190 100,210 20,170" fill="#0d0d0d" />
+  <polygon points="100,190 180,150 180,170 100,210" fill="#141414" />
+
+  <!-- Graph layer — NetworkX knowledge graph -->
+  <polygon points="100,80 180,120 100,160 20,120" fill="#484848" />
+  <polygon points="20,120 100,160 100,180 20,140" fill="#282828" />
+  <polygon points="100,160 180,120 180,140 100,180" fill="#363636" />
+
+  <!-- Wiki layer (orange) — compiled knowledge -->
+  <polygon points="100,50 180,90 100,130 20,90" fill="#e04422" />
+  <polygon points="20,90 100,130 100,150 20,110" fill="#9a2c14" />
+  <polygon points="100,130 180,90 180,110 100,150" fill="#b03318" />
+
+  <!-- Query layer (top) — ask questions, get answers -->
+  <polygon points="100,20 180,60 100,100 20,60" fill="#d5d5d5" />
+  <polygon points="20,60 100,100 100,120 20,80" fill="#a5a5a5" />
+  <polygon points="100,100 180,60 180,80 100,120" fill="#bababa" />
+
+</svg>

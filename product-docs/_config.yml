@@ -1,0 +1,37 @@
+title: my-llm-wiki
+description: Turn any folder into a queryable knowledge graph. Inspired by Karpathy's LLM Wiki concept.
+
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+
+baseurl: "/my-llm-wiki"
+url: "https://phuc-nt.github.io"
+
+logo: "/assets/logo.svg"
+
+color_scheme: brand
+
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+
+nav_sort: order
+
+aux_links:
+  "GitHub":
+    - "https://github.com/phuc-nt/my-llm-wiki"
+  "PyPI":
+    - "https://pypi.org/project/my-llm-wiki/"
+
+aux_links_new_tab: true
+
+footer_content: "Copyright &copy; 2026 phuc-nt &middot; <a href=\"https://github.com/phuc-nt/my-llm-wiki\">GitHub</a> &middot; MIT License"
+
+back_to_top: true
+heading_anchors: true
+
+toc:
+  heading_level: 2
+  toc_level: 2
