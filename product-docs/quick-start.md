@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Install & Quick Start
-nav_order: 5
+nav_order: 6
 description: "Install my-llm-wiki and build your first knowledge graph in 30 seconds."
 ---
 

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Use Cases
-nav_order: 4
+nav_order: 5
 description: "Real-world scenarios for my-llm-wiki: codebases, research, personal knowledge."
 ---
 

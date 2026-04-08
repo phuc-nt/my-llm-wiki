@@ -23,27 +23,22 @@ The core insight: **compile once, query forever.**
 
 `my-llm-wiki` brings this to life with a single command. No vector databases, no RAG pipelines, no API keys needed for code extraction.
 
----
-
-### How it works
-
+```bash
+pip install my-llm-wiki
+llm-wiki .
 ```
-your-files/ → detect → extract → cross-ref → build → cluster → export
-```
-
-| Pass | What | Cost |
-|------|------|------|
-| **Structural** | AST for code (18 languages), headings/links for docs | Free |
-| **Semantic** | Claude Code agents read DOCX, scanned PDFs, images | Claude tokens |
 
 ---
 
 ### What you get
 
-| Output | Description |
-|--------|-------------|
-| `graph.html` | Interactive graph — click, search, filter by community |
-| `graph.json` | Persistent graph — query weeks later without re-reading files |
-| `WIKI_REPORT.md` | God nodes, surprising connections, knowledge gaps |
-| `wiki/` | Wikipedia-style articles per community |
-| `vault/` | Markdown vault with `[[wikilinks]]` |
+```
+wiki-out/
+  graph.html       ← interactive graph (vis.js)
+  graph.json       ← persistent graph data
+  WIKI_REPORT.md   ← god nodes, surprising connections
+  wiki/            ← Wikipedia-style articles
+  vault/           ← markdown vault with [[wikilinks]]
+```
+
+See [How It Works]({% link how-it-works.md %}) for the full pipeline architecture.
