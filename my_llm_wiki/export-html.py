@@ -33,11 +33,15 @@ def to_html(
 
     Raises ValueError if graph exceeds MAX_NODES_FOR_VIZ.
     """
+    # Auto-subsample large graphs for browser performance
     if G.number_of_nodes() > MAX_NODES_FOR_VIZ:
-        raise ValueError(
-            f"Graph has {G.number_of_nodes()} nodes — too large for HTML viz. "
-            f"Use --no-viz or reduce input size (limit: {MAX_NODES_FOR_VIZ})."
-        )
+        top_nodes = sorted(G.nodes(), key=lambda n: G.degree(n), reverse=True)[:200]
+        viz_set = set(top_nodes)
+        for node in top_nodes:
+            for nb in list(G.neighbors(node))[:3]:
+                viz_set.add(nb)
+        G = G.subgraph(viz_set).copy()
+        print(f"[wiki] HTML viz: subsampled to {G.number_of_nodes()} nodes (top 200 + neighbors)")
 
     node_community = _node_community_map(communities)
     degree = dict(G.degree())

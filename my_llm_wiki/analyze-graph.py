@@ -107,8 +107,11 @@ def _surprise_score(G: nx.Graph, u: str, v: str, data: dict,
     return score, reasons
 
 
-def god_nodes(G: nx.Graph, top_n: int = 10) -> list[dict]:
+def god_nodes(G: nx.Graph, top_n: int = 10, **kwargs) -> list[dict]:
     """Return top_n most-connected real entities (file-level hubs excluded)."""
+    # Accept top_k as alias for top_n
+    if "top_k" in kwargs:
+        top_n = kwargs["top_k"]
     result = []
     for node_id, deg in sorted(dict(G.degree()).items(), key=lambda x: x[1], reverse=True):
         if _is_file_node(G, node_id) or _is_concept_node(G, node_id):

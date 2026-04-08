@@ -5,7 +5,37 @@ import sys
 from pathlib import Path
 
 
+_VERSION = "0.2.2"
+
+_HELP = f"""\
+my-llm-wiki v{_VERSION} — turn any folder into a queryable knowledge graph
+
+Usage:
+  llm-wiki [path]                    Build graph (default: current dir)
+  llm-wiki query <command> [args]    Query the built graph
+  llm-wiki watch [path] [interval]   Auto-rebuild on file changes
+  llm-wiki add <url> [--author name] Fetch URL, save as markdown
+
+Query commands:
+  search <terms>   node <label>      neighbors <label>
+  community <id>   path <A> <B>      gods     stats
+
+Options:
+  --version        Show version
+  --help, -h       Show this help
+  --no-viz         Skip HTML visualization (for large graphs)
+"""
+
+
 def main() -> None:
+    # Handle --version and --help before path parsing
+    if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-V"):
+        print(f"my-llm-wiki {_VERSION}")
+        return
+    if len(sys.argv) > 1 and sys.argv[1] in ("--help", "-h"):
+        print(_HELP)
+        return
+
     # Route subcommands
     if len(sys.argv) > 1 and sys.argv[1] == "query":
         import importlib
@@ -33,7 +63,10 @@ def main() -> None:
         print("[wiki] Run `llm-wiki .` to rebuild the graph with ingested content.")
         return
 
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
+    # Parse flags
+    no_viz = "--no-viz" in sys.argv
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    target = Path(args[0]) if args else Path(".")
     if not target.exists():
         print(f"[wiki] Path not found: {target}")
         sys.exit(1)
@@ -128,7 +161,10 @@ def main() -> None:
 
     # 7. Export
     to_json(G, communities, str(out / "graph.json"))
-    to_html(G, communities, str(out / "graph.html"), community_labels)
+    if not no_viz:
+        to_html(G, communities, str(out / "graph.html"), community_labels)
+    else:
+        print("[wiki] Skipping HTML visualization (--no-viz)")
     to_wiki(G, communities, str(out / "wiki"), community_labels, cohesion, nodes)
     to_vault(G, communities, str(out / "vault"), community_labels, cohesion)
 

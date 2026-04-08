@@ -17,10 +17,15 @@ def _partition(G: nx.Graph) -> dict[str, int]:
     Tries Leiden (graspologic) first — best quality.
     Falls back to Louvain (built into networkx) if graspologic is not installed.
     """
-    # Adaptive resolution: sparse doc graphs need lower resolution
-    density = nx.density(G) if G.number_of_nodes() > 1 else 0
-    avg_degree = sum(dict(G.degree()).values()) / max(G.number_of_nodes(), 1)
-    resolution = 1.5 if avg_degree > 3 else 1.0
+    # Adaptive resolution based on graph size and density
+    n = G.number_of_nodes()
+    avg_degree = sum(dict(G.degree()).values()) / max(n, 1)
+    if avg_degree <= 3:
+        resolution = 1.0  # sparse docs: broad grouping
+    elif n > 5000:
+        resolution = 1.0  # large codebases: fewer, larger communities
+    else:
+        resolution = 1.5  # medium codebases: tight communities
 
     try:
         from graspologic.partition import leiden
