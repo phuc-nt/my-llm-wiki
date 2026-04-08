@@ -109,20 +109,8 @@ def extract(paths: list[Path]) -> dict:
     """
     per_file: list[dict] = []
 
-    # Infer a common root for cache key namespacing
-    try:
-        if not paths:
-            root = Path(".")
-        elif len(paths) == 1:
-            root = paths[0].parent
-        else:
-            common_len = sum(
-                1 for i in range(min(len(p.parts) for p in paths))
-                if len({p.parts[i] for p in paths}) == 1
-            )
-            root = Path(*paths[0].parts[:common_len]) if common_len else Path(".")
-    except Exception:
-        root = Path(".")
+    # Use CWD as cache root — ensures cache always lands in ./wiki-out/cache/
+    root = Path(".")
 
     total = len(paths)
     for i, path in enumerate(paths, 1):
