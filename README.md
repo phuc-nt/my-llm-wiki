@@ -61,9 +61,20 @@ wiki-out/
   graph.json       ← persistent graph data
   WIKI_REPORT.md   ← god nodes, surprising connections
   wiki/            ← Wikipedia-style articles
-  vault/           ← markdown vault with [[wikilinks]]
+  vault/           ← Obsidian-compatible vault ([[wikilinks]] + YAML frontmatter)
   cache/           ← SHA256 cache (skip unchanged files)
 ```
+
+### Obsidian integration
+
+`wiki-out/vault/` is a drop-in Obsidian vault. Open it directly, or symlink into an existing vault:
+
+```bash
+llm-wiki .
+# Obsidian → Open folder as vault → wiki-out/vault/
+```
+
+You get: graph view (force-directed), backlinks, tag pane, full-text search, and Properties view (Obsidian 1.4+ reads the YAML frontmatter on each node). Community colors are pre-configured via `.vault/graph.json`. Use `llm-wiki query` from CLI for typed-edge details (Obsidian wikilinks are untyped, so `extends`/`implements`/`calls` collapse to generic links in the Obsidian graph view).
 
 ### CLI
 

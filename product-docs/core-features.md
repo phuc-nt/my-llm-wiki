@@ -161,6 +161,24 @@ The note is saved to `wiki-out/ingested/note-<timestamp>-<slug>.md` with YAML fr
 
 ---
 
+## Obsidian compatibility
+
+`wiki-out/vault/` is a drop-in Obsidian vault. Each node becomes one markdown file with:
+
+- **`[[WikiLinks]]`** for every graph edge — Obsidian backlinks work immediately
+- **YAML frontmatter** with `id`, `type`, `community`, `degree`, `source_file` — renders as Obsidian Properties (1.4+)
+- **Inline `#tags`** from community labels — appear in Obsidian's tag pane
+- **Pre-configured graph colors** via `.vault/graph.json` — community coloring matches the vis.js graph
+
+```bash
+llm-wiki .
+# Obsidian → Open folder as vault → select wiki-out/vault/
+```
+
+**Trade-off:** Obsidian wikilinks are untyped, so `extends` / `implements` / `calls` / `mentions` all render as generic links in Obsidian's graph view. Use `llm-wiki query neighbors <label>` from the CLI for typed-edge detail.
+
+---
+
 ## Schema rules
 
 Create `.wikischema` for custom entity and relation types:

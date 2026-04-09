@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-_VERSION = "0.5.0"
+_VERSION = "0.5.1"
 
 _HELP = f"""\
 my-llm-wiki v{_VERSION} — turn any folder into a queryable knowledge graph
@@ -26,6 +26,7 @@ Note options:
   --link <label>   Link to an existing node (repeatable)
   --tag <name>     Tag the insight (repeatable)
   --title <text>   Custom heading (default: first line of text)
+  --allow-secrets  Skip secret/API-key scan (use only for false positives)
 
 Options:
   --version        Show version
@@ -114,6 +115,7 @@ def main() -> None:
         links: list[str] = []
         tags: list[str] = []
         title: str | None = None
+        allow_secrets = False
         text_parts: list[str] = []
         i = 0
         while i < len(note_args):
@@ -127,6 +129,9 @@ def main() -> None:
             elif tok == "--title" and i + 1 < len(note_args):
                 title = note_args[i + 1]
                 i += 2
+            elif tok == "--allow-secrets":
+                allow_secrets = True
+                i += 1
             else:
                 text_parts.append(tok)
                 i += 1
@@ -138,7 +143,10 @@ def main() -> None:
             print("[wiki] Note text is empty. Provide text as arg or pipe via stdin.")
             sys.exit(1)
         try:
-            path = write_note(text, title=title, links=links or None, tags=tags or None)
+            path = write_note(
+                text, title=title, links=links or None, tags=tags or None,
+                allow_secrets=allow_secrets,
+            )
         except ValueError as e:
             print(f"[wiki] {e}")
             sys.exit(1)

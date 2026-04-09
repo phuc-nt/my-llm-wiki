@@ -161,6 +161,7 @@ llm-wiki note "<insight text>" [--link <node>] [--tag <tag>] [--title <heading>]
 - Always `--link` to the relevant code/doc node if you know its label — this creates a `mentions` edge on the next rebuild.
 - Keep it terse. One or two sentences usually suffices.
 - After capturing a batch of notes, rebuild: `llm-wiki .`
+- **Never paste secrets** — the note command blocks API keys, tokens, PEM blocks, AWS/GitHub/Slack/Google/JWT credentials. If you hit a false positive, redact the token first (e.g., replace with `<REDACTED>`) rather than using `--allow-secrets`.
 
 **Alternative** — for pre-formatted multi-line content, pipe via stdin:
 
