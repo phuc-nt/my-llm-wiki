@@ -11,6 +11,9 @@ import networkx as nx
 
 from my_llm_wiki.constants import COMMUNITY_COLORS
 
+_vault_log = importlib.import_module("my_llm_wiki.vault-log")
+append_log_entry = _vault_log.append_log_entry
+
 _analyze = importlib.import_module("my_llm_wiki.analyze-graph")
 _node_community_map = _analyze._node_community_map
 _dominant_confidence = _analyze._dominant_confidence
@@ -328,6 +331,15 @@ def to_vault(
     )
 
     _write_index_md(G, out, node_filename, communities, community_labels, cohesion)
+
+    n_nodes = G.number_of_nodes()
+    n_edges = G.number_of_edges()
+    n_comm = len(communities)
+    desc = (
+        f"{n_nodes} nodes · {n_edges} edge{'s' if n_edges != 1 else ''} · "
+        f"{n_comm} communit{'ies' if n_comm != 1 else 'y'}"
+    )
+    append_log_entry(out, "build", desc)
 
     # Write .vault/graph.json to color nodes by community in graph view
     vault_dir = out / ".vault"

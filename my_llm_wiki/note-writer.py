@@ -3,9 +3,12 @@
 # into the graph — closing the Karpathy write-back loop.
 from __future__ import annotations
 
+import importlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+
+_vault_log = importlib.import_module("my_llm_wiki.vault-log")
 
 
 _MAX_TITLE_LEN = 80
@@ -130,4 +133,12 @@ def write_note(
 
     content = "\n".join(fm) + "\n\n" + "\n".join(body_parts) + "\n"
     path.write_text(content, encoding="utf-8")
+
+    # Log to sibling vault/log.md if a vault exists alongside the ingested dir
+    sibling_vault = out.parent / "vault"
+    log_desc = heading
+    if links:
+        log_desc += " → " + ", ".join(f"[[{L}]]" for L in links)
+    _vault_log.append_log_entry(sibling_vault, "note", log_desc)
+
     return path

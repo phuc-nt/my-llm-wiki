@@ -46,6 +46,8 @@ def __getattr__(name: str):
         "ingest": ("my_llm_wiki.ingest-url", "ingest"),
         # note write-back
         "write_note": ("my_llm_wiki.note-writer", "write_note"),
+        # vault activity log
+        "append_log_entry": ("my_llm_wiki.vault-log", "append_log_entry"),
         # file watcher
         "watch": ("my_llm_wiki.watch-folder", "watch"),
         # schema

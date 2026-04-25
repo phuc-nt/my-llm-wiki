@@ -78,6 +78,8 @@ You get: graph view (force-directed), backlinks, tag pane, full-text search, and
 
 **`vault/index.md`** is the entry point — content catalog grouped by file type with a Communities section. LLMs (and humans) read it first to navigate the vault before drilling into specific notes.
 
+**`vault/log.md`** is the append-only activity log — chronological record of every build and note write-back. Grep-friendly format for auditing how the wiki has grown over time.
+
 ### CLI
 
 ```bash
