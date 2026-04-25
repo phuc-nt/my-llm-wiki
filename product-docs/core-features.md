@@ -167,6 +167,7 @@ The note is saved to `wiki-out/ingested/note-<timestamp>-<slug>.md` with YAML fr
 
 - **`index.md`** — auto-generated content catalog grouped by file type with a Communities section. The entry point LLMs read first to navigate the vault efficiently
 - **`log.md`** — append-only chronological record of vault activity (builds, note write-backs). Format: `## [YYYY-MM-DD HH:MM] [op] | desc`. Grep-friendly audit trail for the compounding-artifact loop
+- **Subfolders by type** — `code/`, `document/`, `paper/`, `image/`, `note/`, `other/` for nodes; `communities/` for community summaries. Wikilinks remain basename-only so Obsidian resolves them across the vault
 - **`[[WikiLinks]]`** for every graph edge — Obsidian backlinks work immediately
 - **YAML frontmatter** with `id`, `type`, `community`, `degree`, `source_file` — renders as Obsidian Properties (1.4+)
 - **Inline `#tags`** from community labels — appear in Obsidian's tag pane

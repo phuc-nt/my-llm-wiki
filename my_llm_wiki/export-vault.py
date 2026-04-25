@@ -69,6 +69,11 @@ def _build_node_filenames(G: nx.Graph) -> dict[str, str]:
     return node_filename
 
 
+def _node_subfolder(file_type: str | None) -> str:
+    """Map a node's file_type to its vault subfolder. Unknown → 'other'."""
+    return file_type if file_type else "other"
+
+
 def _write_node_notes(
     G: nx.Graph,
     out: Path,
@@ -76,7 +81,11 @@ def _write_node_notes(
     node_community: dict[str, int],
     community_labels: dict[int, str] | None,
 ) -> None:
-    """Write one .md file per node with YAML frontmatter and [[wikilinks]]."""
+    """Write one .md file per node with YAML frontmatter and [[wikilinks]].
+
+    Files are grouped into <out>/<file_type>/ subfolders. Wikilinks stay
+    basename-only — Obsidian resolves them across the vault regardless of folder.
+    """
     for node_id, data in G.nodes(data=True):
         label = data.get("label", node_id)
         cid = node_community.get(node_id)
@@ -121,7 +130,9 @@ def _write_node_notes(
         inline_tags = " ".join(f"#{t}" for t in node_tags)
         lines.append(inline_tags)
 
-        (out / (node_filename[node_id] + ".md")).write_text("\n".join(lines), encoding="utf-8")
+        subdir = out / _node_subfolder(ftype)
+        subdir.mkdir(parents=True, exist_ok=True)
+        (subdir / (node_filename[node_id] + ".md")).write_text("\n".join(lines), encoding="utf-8")
 
 
 def _write_community_notes(
@@ -232,7 +243,9 @@ def _write_community_notes(
                 )
 
         community_safe = _safe_name(community_name)
-        (out / f"_COMMUNITY_{community_safe}.md").write_text("\n".join(lines), encoding="utf-8")
+        comm_dir = out / "communities"
+        comm_dir.mkdir(parents=True, exist_ok=True)
+        (comm_dir / f"_COMMUNITY_{community_safe}.md").write_text("\n".join(lines), encoding="utf-8")
         written += 1
 
     return written

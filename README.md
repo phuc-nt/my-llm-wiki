@@ -76,6 +76,8 @@ llm-wiki .
 
 You get: graph view (force-directed), backlinks, tag pane, full-text search, and Properties view (Obsidian 1.4+ reads the YAML frontmatter on each node). Community colors are pre-configured via `.vault/graph.json`. Use `llm-wiki query` from CLI for typed-edge details (Obsidian wikilinks are untyped, so `extends`/`implements`/`calls` collapse to generic links in the Obsidian graph view).
 
+Node notes are organized into `code/`, `document/`, `paper/`, `image/`, `note/`, and `other/` subfolders so the vault stays navigable as it grows. Community summaries live in `communities/`. Wikilinks remain basename-only — Obsidian resolves them across the vault regardless of folder.
+
 **`vault/index.md`** is the entry point — content catalog grouped by file type with a Communities section. LLMs (and humans) read it first to navigate the vault before drilling into specific notes.
 
 **`vault/log.md`** is the append-only activity log — chronological record of every build and note write-back. Grep-friendly format for auditing how the wiki has grown over time.
