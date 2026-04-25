@@ -235,6 +235,70 @@ def _write_community_notes(
     return written
 
 
+def _write_index_md(
+    G: nx.Graph,
+    out: Path,
+    node_filename: dict[str, str],
+    communities: dict[int, list[str]],
+    community_labels: dict[int, str] | None,
+    cohesion: dict[int, float] | None,
+) -> None:
+    """Write vault/index.md — content catalog grouped by file_type + Communities section.
+
+    LLMs read this first to navigate the vault efficiently (Karpathy compounding-artifact pattern).
+    """
+    # Group nodes by file_type (fall back to "Other" when missing)
+    by_type: dict[str, list[str]] = {}
+    for node_id, data in G.nodes(data=True):
+        ftype = data.get("file_type") or "other"
+        by_type.setdefault(ftype, []).append(node_id)
+
+    lines: list[str] = [
+        "---",
+        "type: vault-index",
+        f"nodes: {G.number_of_nodes()}",
+        f"communities: {len(communities)}",
+        "---",
+        "",
+        "# Vault Index",
+        "",
+        f"{G.number_of_nodes()} nodes across {len(communities)} communities.",
+        "",
+    ]
+
+    # One section per file_type, sorted by section size desc then name
+    for ftype in sorted(by_type, key=lambda t: (-len(by_type[t]), t)):
+        nodes = by_type[ftype]
+        lines.append(f"## {ftype.capitalize()} ({len(nodes)})")
+        lines.append("")
+        for node_id in sorted(nodes, key=lambda n: G.nodes[n].get("label", n).lower()):
+            data = G.nodes[node_id]
+            link = node_filename[node_id]
+            degree = G.degree(node_id)
+            source = data.get("source_file", "")
+            entry = f"- [[{link}]] — degree {degree}"
+            if source:
+                entry += f" · `{source}`"
+            lines.append(entry)
+        lines.append("")
+
+    # Communities section
+    if communities:
+        lines.append(f"## Communities ({len(communities)})")
+        lines.append("")
+        for cid in sorted(communities):
+            members = communities[cid]
+            name = (community_labels or {}).get(cid, f"Community {cid}")
+            safe = _safe_name(name)
+            entry = f"- [[_COMMUNITY_{safe}]] — {len(members)} members"
+            if cohesion and cid in cohesion:
+                entry += f" · cohesion {cohesion[cid]:.2f}"
+            lines.append(entry)
+        lines.append("")
+
+    (out / "index.md").write_text("\n".join(lines), encoding="utf-8")
+
+
 def to_vault(
     G: nx.Graph,
     communities: dict[int, list[str]],
@@ -262,6 +326,8 @@ def to_vault(
     community_notes = _write_community_notes(
         G, out, communities, node_filename, node_community, community_labels, cohesion
     )
+
+    _write_index_md(G, out, node_filename, communities, community_labels, cohesion)
 
     # Write .vault/graph.json to color nodes by community in graph view
     vault_dir = out / ".vault"

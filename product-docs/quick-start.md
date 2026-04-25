@@ -34,10 +34,10 @@ wiki-out/
   graph.json       ← persistent graph data
   WIKI_REPORT.md   ← analysis report
   wiki/            ← Wikipedia-style articles
-  vault/           ← Obsidian-compatible vault ([[wikilinks]] + YAML frontmatter)
+  vault/           ← Obsidian vault — index.md catalog + [[wikilinks]] + YAML frontmatter
 ```
 
-**Open in Obsidian:** Point Obsidian at `wiki-out/vault/` (Open folder as vault) — graph view, backlinks, tag pane, and Properties all work out of the box. Community colors are pre-configured via `.vault/graph.json`.
+**Open in Obsidian:** Point Obsidian at `wiki-out/vault/` (Open folder as vault) — graph view, backlinks, tag pane, and Properties all work out of the box. Start from `index.md` (auto-generated catalog by file type + communities). Community colors are pre-configured via `.vault/graph.json`.
 
 ## Query
 

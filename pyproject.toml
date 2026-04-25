@@ -55,10 +55,15 @@ pdf = ["pypdf>=4.0", "html2text"]
 leiden = ["graspologic"]
 office = ["python-docx>=1.0", "openpyxl>=3.1"]
 all = ["pypdf>=4.0", "html2text", "graspologic", "python-docx>=1.0", "openpyxl>=3.1"]
+dev = ["pytest>=7.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["my_llm_wiki*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
 
 [tool.setuptools.package-data]
 my_llm_wiki = ["SKILL.md"]

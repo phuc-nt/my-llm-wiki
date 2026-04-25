@@ -61,7 +61,7 @@ wiki-out/
   graph.json       ← persistent graph data
   WIKI_REPORT.md   ← god nodes, surprising connections
   wiki/            ← Wikipedia-style articles
-  vault/           ← Obsidian-compatible vault ([[wikilinks]] + YAML frontmatter)
+  vault/           ← Obsidian vault — index.md catalog + [[wikilinks]] + YAML frontmatter
   cache/           ← SHA256 cache (skip unchanged files)
 ```
 
@@ -75,6 +75,8 @@ llm-wiki .
 ```
 
 You get: graph view (force-directed), backlinks, tag pane, full-text search, and Properties view (Obsidian 1.4+ reads the YAML frontmatter on each node). Community colors are pre-configured via `.vault/graph.json`. Use `llm-wiki query` from CLI for typed-edge details (Obsidian wikilinks are untyped, so `extends`/`implements`/`calls` collapse to generic links in the Obsidian graph view).
+
+**`vault/index.md`** is the entry point — content catalog grouped by file type with a Communities section. LLMs (and humans) read it first to navigate the vault before drilling into specific notes.
 
 ### CLI
 
