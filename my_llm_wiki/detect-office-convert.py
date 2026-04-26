@@ -20,7 +20,20 @@ _DEFAULT_MANIFEST = f"{OUTPUT_DIR}/manifest.json"
 
 
 def extract_pdf_text(path: Path) -> str:
-    """Extract plain text from a PDF file using pypdf."""
+    """Extract text from a PDF file.
+
+    Tries Docling first (layout-aware, handles tables) when available.
+    Falls back to pypdf for plain-text extraction. OCR is intentionally
+    disabled here — scanned-PDF OCR happens in a later phase via a
+    separate code path so users explicitly opt into the slow operation.
+    """
+    if not Path(path).exists():
+        return ""
+    if _docling.is_docling_available():
+        result = _docling_extract(Path(path))
+        text = result.get("text") or ""
+        if not result.get("error") and text.strip():
+            return text
     try:
         from pypdf import PdfReader
         reader = PdfReader(str(path))
