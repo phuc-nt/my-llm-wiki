@@ -118,18 +118,34 @@ def _normalize_link_target(target: str, source_file: str) -> str | None:
     return '/'.join(parts) if parts else None
 
 
+def _pdf_page_count(path: Path) -> int:
+    """Return the page count of a PDF, preferring Docling when available."""
+    try:
+        import importlib
+        docling = importlib.import_module("my_llm_wiki.extract-with-docling")
+        if docling.is_docling_available():
+            result = docling.extract_with_docling(path)
+            if not result.get("error"):
+                return int(result.get("page_count") or 0)
+    except Exception:
+        pass
+    try:
+        from pypdf import PdfReader
+        return len(PdfReader(str(path)).pages)
+    except Exception:
+        return 0
+
+
 def _read_file_text(path: Path) -> str:
-    """Read file content as text. Handles PDF via pypdf, others as UTF-8."""
-    if path.suffix.lower() == ".pdf":
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(str(path))
-            pages = [page.extract_text() or "" for page in reader.pages]
-            return "\n\n".join(pages)
-        except ImportError:
-            return ""  # pypdf not installed
-        except Exception:
-            return ""
+    """Read file content as text. Routes through office converters for
+    PDF/DOCX/PPTX/HTML so the Docling pipeline (when installed) is used
+    consistently. Falls back to UTF-8 read for plain text files.
+    """
+    ext = path.suffix.lower()
+    if ext == ".pdf":
+        import importlib
+        office = importlib.import_module("my_llm_wiki.detect-office-convert")
+        return office.extract_pdf_text(path)
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
@@ -158,13 +174,21 @@ def extract_doc(path: Path, root: Path | None = None) -> dict:
     edges: list[dict] = []
     seen_ids: set[str] = set()
 
+    is_pdf = path.suffix.lower() == ".pdf"
+    file_type = "paper" if is_pdf else "document"
+
     # Document hub node
     doc_name = path.stem
     doc_id = _make_id(str_path, doc_name)
-    nodes.append({
-        "id": doc_id, "label": doc_name, "file_type": "document",
+    hub_node: dict = {
+        "id": doc_id, "label": doc_name, "file_type": file_type,
         "source_file": str_path, "source_location": "L1",
-    })
+    }
+    if is_pdf:
+        page_count = _pdf_page_count(path)
+        if page_count:
+            hub_node["pages"] = page_count
+    nodes.append(hub_node)
     seen_ids.add(doc_id)
 
     # Extract h1/h2 headings as section nodes (h3+ too granular)

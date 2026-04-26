@@ -110,6 +110,8 @@ def _write_node_notes(
         ]
         if data.get("source_location"):
             lines.append(f'location: "{data["source_location"]}"')
+        if data.get("pages"):
+            lines.append(f'pages: {data["pages"]}')
         lines.append("tags:")
         for tag in node_tags:
             lines.append(f"  - {tag}")
