@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "my-llm-wiki"
-version = "0.6.0"
+version = "0.7.0"
 description = "Turn any folder into a queryable knowledge graph. Inspired by Andrej Karpathy's LLM Wiki concept."
 readme = "README.md"
 license = "MIT"

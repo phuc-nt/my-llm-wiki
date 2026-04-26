@@ -21,7 +21,8 @@ In April 2026, Andrej Karpathy [shared a concept](https://gist.github.com/karpat
 `my-llm-wiki` implements all three layers. See [How It's Built](https://phuc-nt.github.io/my-llm-wiki/why.html) for the full narrative on how Karpathy's vision is realized.
 
 ```bash
-pip install my-llm-wiki
+pip install my-llm-wiki              # core: code + markdown
+pip install 'my-llm-wiki[docling]'   # + layout-aware PDF/DOCX/PPTX/HTML extraction
 cd your-project && llm-wiki .
 ```
 
@@ -50,8 +51,8 @@ Two passes extract knowledge from any file type:
 
 | Pass | What | Cost |
 |------|------|------|
-| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref | Free |
-| **Semantic** | Claude Code agents read DOCX, scanned PDFs, images with vision | Claude tokens |
+| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML via Docling, with OCR fallback for scanned PDFs. | Free |
+| **Semantic** | Claude Code agents read images with vision; deeper synthesis on any file | Claude tokens |
 
 Output goes to `wiki-out/`:
 
