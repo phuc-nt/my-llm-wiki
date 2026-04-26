@@ -2,11 +2,18 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from my_llm_wiki.constants import OUTPUT_DIR
+
+# Docling adapter — lazy-loaded module reference. Tests can monkeypatch
+# `_docling_extract` to spy on or stub out the integration without touching
+# the real Docling import surface.
+_docling = importlib.import_module("my_llm_wiki.extract-with-docling")
+_docling_extract = _docling.extract_with_docling
 
 # Default manifest path relative to working directory
 _DEFAULT_MANIFEST = f"{OUTPUT_DIR}/manifest.json"
@@ -28,7 +35,23 @@ def extract_pdf_text(path: Path) -> str:
 
 
 def docx_to_markdown(path: Path) -> str:
-    """Convert a .docx file to markdown text using python-docx."""
+    """Convert a .docx file to markdown text.
+
+    Tries Docling first when available — it preserves layout, tables,
+    and multi-column structure better than python-docx. Falls back to
+    python-docx so users without `[docling]` extra still get extraction.
+    """
+    if _docling.is_docling_available():
+        result = _docling_extract(Path(path))
+        text = result.get("text") or ""
+        if not result.get("error") and text.strip():
+            return text
+    return _legacy_docx_to_markdown(path)
+
+
+def _legacy_docx_to_markdown(path: Path) -> str:
+    """Original python-docx based extraction. Used as fallback when Docling
+    is unavailable or fails."""
     try:
         from docx import Document
         doc = Document(str(path))
