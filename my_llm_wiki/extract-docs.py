@@ -13,6 +13,14 @@ _LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 # List items that look like definitions: - **Term**: description
 _DEFINITION_RE = re.compile(r'^[\s]*[-*]\s+\*\*([^*]+)\*\*[:\s]', re.MULTILINE)
 
+# Standalone bold line as a heading fallback (D7). Matches a single line
+# whose entire content is **...** with 1-80 chars inside. Used only when a
+# document has no markdown # headings — many real-world DOCX/PDF files use
+# inline bold for titles instead of Heading 1/2 styles. Roman numerals like
+# **I**, **II** are valid section markers, hence min length 1.
+_BOLD_HEADING_RE = re.compile(r'^\s*\*\*([^*\n]{1,80})\*\*\s*$')
+_HEADING_TRAILING_PUNCT = (".", ",", ":", ";", "?", "!")
+
 # Generic headings that don't carry domain-specific meaning — skip for cross-doc matching
 _GENERIC_HEADINGS = {
     "next steps", "troubleshooting", "examples", "overview", "summary",
@@ -31,8 +39,13 @@ def _make_id(source_file: str, label: str) -> str:
 def _extract_headings(text: str) -> list[tuple[int, str, int]]:
     """Extract (level, title, line_number) from markdown headings.
     Skips headings inside fenced code blocks.
+
+    Fallback (D7): if zero ``#``-style headings exist, treat standalone
+    ``**bold**`` lines (2-80 chars, no trailing punctuation) as h1 headings.
+    Common in DOCX/PDF that use inline bold instead of Heading 1/2 styles.
     """
     headings = []
+    bold_candidates: list[tuple[int, str, int]] = []
     in_code_block = False
     for i, line in enumerate(text.splitlines(), 1):
         if line.strip().startswith('```'):
@@ -45,7 +58,17 @@ def _extract_headings(text: str) -> list[tuple[int, str, int]]:
             title = m.group(2).strip()
             if not _is_noisy_term(title):
                 headings.append((len(m.group(1)), title, i))
-    return headings
+            continue
+        bm = _BOLD_HEADING_RE.match(line)
+        if bm:
+            title = bm.group(1).strip()
+            if title.endswith(_HEADING_TRAILING_PUNCT):
+                continue
+            bold_candidates.append((1, title, i))
+
+    if headings:
+        return headings
+    return bold_candidates
 
 
 def _extract_links(text: str) -> list[tuple[str, str]]:
