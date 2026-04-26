@@ -48,6 +48,9 @@ def __getattr__(name: str):
         "write_note": ("my_llm_wiki.note-writer", "write_note"),
         # vault activity log
         "append_log_entry": ("my_llm_wiki.vault-log", "append_log_entry"),
+        # docling adapter (optional extra)
+        "extract_with_docling": ("my_llm_wiki.extract-with-docling", "extract_with_docling"),
+        "is_docling_available": ("my_llm_wiki.extract-with-docling", "is_docling_available"),
         # file watcher
         "watch": ("my_llm_wiki.watch-folder", "watch"),
         # schema
