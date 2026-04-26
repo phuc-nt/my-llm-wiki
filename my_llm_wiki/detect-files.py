@@ -16,6 +16,8 @@ convert_office_file = _office_mod.convert_office_file
 extract_pdf_text = _office_mod.extract_pdf_text
 docx_to_markdown = _office_mod.docx_to_markdown
 xlsx_to_markdown = _office_mod.xlsx_to_markdown
+pptx_to_markdown = _office_mod.pptx_to_markdown
+html_to_markdown = _office_mod.html_to_markdown
 
 
 class FileType(str, Enum):
@@ -34,7 +36,7 @@ CODE_EXTENSIONS = {
 DOC_EXTENSIONS = {'.md', '.txt', '.rst'}
 PAPER_EXTENSIONS = {'.pdf'}
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.heic', '.heif', '.tiff', '.bmp'}
-OFFICE_EXTENSIONS = {'.docx', '.xlsx'}
+OFFICE_EXTENSIONS = {'.docx', '.xlsx', '.pptx', '.html', '.htm'}
 
 CORPUS_WARN_THRESHOLD = 50_000    # words - below this, warn "you may not need a graph"
 CORPUS_UPPER_THRESHOLD = 500_000  # words - above this, warn about token cost
@@ -114,6 +116,10 @@ def count_words(path: Path) -> int:
             return len(docx_to_markdown(path).split())
         if ext == ".xlsx":
             return len(xlsx_to_markdown(path).split())
+        if ext == ".pptx":
+            return len(pptx_to_markdown(path).split())
+        if ext in (".html", ".htm"):
+            return len(html_to_markdown(path).split())
         return len(path.read_text(errors="ignore").split())
     except Exception:
         return 0

@@ -150,6 +150,43 @@ def _legacy_docx_to_markdown(path: Path) -> str:
         return ""
 
 
+def pptx_to_markdown(path: Path) -> str:
+    """Convert a .pptx file to markdown using Docling.
+
+    No fallback — python-pptx exists but extracts only naive text;
+    not worth the maintenance burden for v0.7. Without Docling, PPTX
+    files are simply skipped (returns empty string).
+    """
+    if not _docling.is_docling_available():
+        return ""
+    result = _docling_extract(Path(path))
+    if result.get("error"):
+        return ""
+    return result.get("text") or ""
+
+
+def html_to_markdown(path: Path) -> str:
+    """Convert an .html file to markdown.
+
+    Tries Docling first (preserves heading hierarchy + links).
+    Falls back to a naive tag-stripping pass when Docling unavailable.
+    """
+    if _docling.is_docling_available():
+        result = _docling_extract(Path(path))
+        text = result.get("text") or ""
+        if not result.get("error") and text.strip():
+            return text
+    try:
+        import re
+        raw = Path(path).read_text(encoding="utf-8", errors="ignore")
+        # Strip HTML tags and collapse whitespace
+        text = re.sub(r"<[^>]+>", " ", raw)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+    except Exception:
+        return ""
+
+
 def xlsx_to_markdown(path: Path) -> str:
     """Convert an .xlsx file to markdown text using openpyxl."""
     try:
@@ -191,6 +228,10 @@ def convert_office_file(path: Path, out_dir: Path) -> Path | None:
         text = docx_to_markdown(path)
     elif ext == ".xlsx":
         text = xlsx_to_markdown(path)
+    elif ext == ".pptx":
+        text = pptx_to_markdown(path)
+    elif ext in (".html", ".htm"):
+        text = html_to_markdown(path)
     else:
         return None
 
