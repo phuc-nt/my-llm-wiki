@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -165,6 +166,107 @@ def pptx_to_markdown(path: Path) -> str:
     return result.get("text") or ""
 
 
+def _epub_to_html(path: Path) -> str:
+    """Unpack an EPUB and return its content as a single HTML document.
+
+    EPUB = ZIP of XHTML chapters + manifest (OPF) + container.xml. We follow
+    container.xml → OPF → spine to get chapters in reading order, then concat.
+    Pure stdlib (zipfile + xml.etree); no extra deps.
+    """
+    import zipfile
+    import xml.etree.ElementTree as ET
+    from urllib.parse import unquote
+
+    try:
+        with zipfile.ZipFile(path) as z:
+            # Locate OPF via container.xml
+            try:
+                container = z.read("META-INF/container.xml").decode("utf-8", "ignore")
+            except KeyError:
+                return ""
+            ns_c = {"c": "urn:oasis:names:tc:opendocument:xmlns:container"}
+            root = ET.fromstring(container)
+            rootfile = root.find(".//c:rootfile", ns_c)
+            if rootfile is None:
+                return ""
+            opf_path = rootfile.get("full-path") or ""
+            if not opf_path:
+                return ""
+
+            # Parse OPF: manifest (id → href) + spine (ordered idrefs)
+            opf_dir = opf_path.rsplit("/", 1)[0] if "/" in opf_path else ""
+            opf = ET.fromstring(z.read(opf_path).decode("utf-8", "ignore"))
+            ns_opf = {"o": "http://www.idpf.org/2007/opf"}
+            manifest = {
+                item.get("id"): item.get("href")
+                for item in opf.findall(".//o:manifest/o:item", ns_opf)
+                if item.get("id") and item.get("href")
+            }
+            spine_ids = [
+                ref.get("idref")
+                for ref in opf.findall(".//o:spine/o:itemref", ns_opf)
+                if ref.get("idref")
+            ]
+
+            # Read each chapter HTML in spine order
+            chapters = []
+            for sid in spine_ids:
+                href = manifest.get(sid)
+                if not href:
+                    continue
+                full = f"{opf_dir}/{href}" if opf_dir else href
+                full = unquote(full)
+                try:
+                    chapters.append(z.read(full).decode("utf-8", "ignore"))
+                except KeyError:
+                    continue
+
+        if not chapters:
+            return ""
+        # Strip XML/DOCTYPE prologues from each chapter, wrap as one body
+        bodies = []
+        body_re = re.compile(r"<body[^>]*>(.*?)</body>", re.DOTALL | re.IGNORECASE)
+        for ch in chapters:
+            m = body_re.search(ch)
+            bodies.append(m.group(1) if m else ch)
+        return "<html><body>\n" + "\n".join(bodies) + "\n</body></html>"
+    except Exception:
+        return ""
+
+
+def epub_to_markdown(path: Path) -> str:
+    """Convert an .epub file to markdown.
+
+    Two-step: unpack EPUB → merged HTML → Docling HTML pipeline. Docling 2.91
+    has no native EPUB format, but EPUB internals are XHTML so we feed the
+    merged document through Docling's well-tested HTML extractor.
+
+    Without Docling, EPUB files are skipped (returns empty string).
+    """
+    if not _docling.is_docling_available():
+        return ""
+    html = _epub_to_html(Path(path))
+    if not html.strip():
+        return ""
+    # Write to a temp .html so Docling's path-based converter picks it up
+    import tempfile
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".html", delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(html)
+        tmp_path = Path(tmp.name)
+    try:
+        result = _docling_extract(tmp_path)
+        if result.get("error"):
+            return ""
+        return result.get("text") or ""
+    finally:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+
+
 def html_to_markdown(path: Path) -> str:
     """Convert an .html file to markdown.
 
@@ -232,6 +334,8 @@ def convert_office_file(path: Path, out_dir: Path) -> Path | None:
         text = pptx_to_markdown(path)
     elif ext in (".html", ".htm"):
         text = html_to_markdown(path)
+    elif ext == ".epub":
+        text = epub_to_markdown(path)
     else:
         return None
 

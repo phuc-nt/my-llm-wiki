@@ -36,7 +36,7 @@ CODE_EXTENSIONS = {
 DOC_EXTENSIONS = {'.md', '.txt', '.rst'}
 PAPER_EXTENSIONS = {'.pdf'}
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.heic', '.heif', '.tiff', '.bmp'}
-OFFICE_EXTENSIONS = {'.docx', '.xlsx', '.pptx', '.html', '.htm'}
+OFFICE_EXTENSIONS = {'.docx', '.xlsx', '.pptx', '.html', '.htm', '.epub'}
 
 CORPUS_WARN_THRESHOLD = 50_000    # words - below this, warn "you may not need a graph"
 CORPUS_UPPER_THRESHOLD = 500_000  # words - above this, warn about token cost
