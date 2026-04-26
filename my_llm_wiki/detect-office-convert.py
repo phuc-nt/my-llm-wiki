@@ -19,32 +19,80 @@ _docling_extract = _docling.extract_with_docling
 _DEFAULT_MANIFEST = f"{OUTPUT_DIR}/manifest.json"
 
 
-def extract_pdf_text(path: Path) -> str:
-    """Extract text from a PDF file.
+# Threshold below which a multi-page PDF is treated as "probably scanned"
+# and worth re-running through Docling with OCR enabled.
+_SCANNED_TEXT_THRESHOLD = 50
+_SCANNED_MIN_PAGES = 2
 
-    Tries Docling first (layout-aware, handles tables) when available.
-    Falls back to pypdf for plain-text extraction. OCR is intentionally
-    disabled here — scanned-PDF OCR happens in a later phase via a
-    separate code path so users explicitly opt into the slow operation.
-    """
-    if not Path(path).exists():
-        return ""
-    if _docling.is_docling_available():
-        result = _docling_extract(Path(path))
-        text = result.get("text") or ""
-        if not result.get("error") and text.strip():
-            return text
+
+def _looks_scanned(text: str, page_count: int) -> bool:
+    """Heuristic: PDF likely scanned if it has multiple pages but barely any text."""
+    if page_count < _SCANNED_MIN_PAGES:
+        return False
+    return len((text or "").strip()) < _SCANNED_TEXT_THRESHOLD
+
+
+def _docling_extract_with_ocr(path: Path) -> dict:
+    """Run Docling with OCR enabled. Slow — only call after scanned detection."""
+    try:
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+
+        opts = PdfPipelineOptions()
+        opts.do_ocr = True
+        converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
+        )
+        result = converter.convert(str(path))
+        return _docling._normalize(result.document)
+    except Exception as exc:
+        return {"text": "", "headings": [], "tables": [], "page_count": 0, "error": str(exc)}
+
+
+def _pypdf_extract(path: Path) -> str:
+    """Fallback PDF text extraction via pypdf — no OCR, no layout analysis."""
     try:
         from pypdf import PdfReader
         reader = PdfReader(str(path))
-        pages = []
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                pages.append(text)
-        return "\n".join(pages)
+        pages = [page.extract_text() for page in reader.pages]
+        return "\n".join(p for p in pages if p)
     except Exception:
         return ""
+
+
+def extract_pdf_text(path: Path) -> str:
+    """Extract text from a PDF file.
+
+    Strategy:
+    1. Native Docling (no OCR) — fast, layout-aware
+    2. pypdf fallback — when Docling unavailable
+    3. Docling with OCR — only when result looks scanned (sparse text on multi-page PDF)
+    """
+    path = Path(path)
+    if not path.exists():
+        return ""
+
+    text = ""
+    page_count = 0
+    if _docling.is_docling_available():
+        result = _docling_extract(path)
+        if not result.get("error"):
+            text = result.get("text") or ""
+            page_count = result.get("page_count") or 0
+
+    if not text.strip():
+        text = _pypdf_extract(path)
+
+    # Trigger OCR only for clearly-scanned multi-page PDFs
+    if _docling.is_docling_available() and _looks_scanned(text, page_count):
+        ocr_result = _docling_extract_with_ocr(path)
+        if not ocr_result.get("error"):
+            ocr_text = ocr_result.get("text") or ""
+            if ocr_text.strip():
+                return ocr_text
+
+    return text
 
 
 def docx_to_markdown(path: Path) -> str:
