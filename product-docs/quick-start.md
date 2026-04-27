@@ -16,7 +16,7 @@ pip install my-llm-wiki
 Optional extras:
 
 ```bash
-pip install my-llm-wiki[docling]   # layout-aware PDF/DOCX/PPTX/HTML extraction with OCR fallback
+pip install my-llm-wiki[docling]   # layout-aware PDF/DOCX/PPTX/HTML/EPUB extraction with OCR fallback
 pip install my-llm-wiki[all]       # everything: PDF + office + Docling + better clustering
 ```
 

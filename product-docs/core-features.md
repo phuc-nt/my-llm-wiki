@@ -20,7 +20,7 @@ Runs with `llm-wiki .`:
   - Doc comments (Javadoc, JSDoc, GoDoc, `///`)
   - Call graph (function-to-function calls)
 - **Markdown/text** — headings, definitions, cross-document links
-- **PDF/DOCX/PPTX/HTML** — layout-aware extraction via [Docling](https://github.com/docling-project/docling) (install `[docling]` extra). Headings, tables, and structure preserved. Scanned PDFs auto-detected and re-run with OCR. PDF hub nodes carry a `pages` attribute.
+- **PDF/DOCX/PPTX/HTML/EPUB** — layout-aware extraction via [Docling](https://github.com/docling-project/docling) (install `[docling]` extra). Headings, tables, and structure preserved. Scanned PDFs auto-detected and re-run with OCR. EPUB unpacked via stdlib zipfile and routed through Docling's HTML pipeline. PDF hub nodes carry a `pages` attribute. Documents using inline `**bold**` instead of heading styles are still sectioned via a fallback heuristic.
 - **Images** — hub nodes (content needs agent mode)
 - **Cross-reference** — code entities mentioned in docs get `mentions` edges
 
@@ -32,7 +32,7 @@ Runs in Claude Code via `/wiki .`. Dispatches subagents for deeper synthesis on 
 |-----------|-----------|---------|---------|
 | Code (18 langs) | Full AST + doc comments | — | No agent needed |
 | Markdown | Headings + links | 2x entities | Optional |
-| DOCX/PPTX/HTML | Layout-aware extraction (Docling) | Deeper synthesis | Optional |
+| DOCX/PPTX/HTML/EPUB | Layout-aware extraction (Docling) | Deeper synthesis | Optional |
 | PDF (text) | Layout + page count (Docling) | Deeper synthesis | Optional |
 | PDF (scanned) | OCR fallback (Docling) | Deeper synthesis | Optional |
 | Images (HEIC/PNG/JPG) | Hub nodes only | **Vision OCR** | Use agent |

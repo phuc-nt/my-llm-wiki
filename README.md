@@ -22,7 +22,7 @@ In April 2026, Andrej Karpathy [shared a concept](https://gist.github.com/karpat
 
 ```bash
 pip install my-llm-wiki              # core: code + markdown
-pip install 'my-llm-wiki[docling]'   # + layout-aware PDF/DOCX/PPTX/HTML extraction
+pip install 'my-llm-wiki[docling]'   # + layout-aware PDF/DOCX/PPTX/HTML/EPUB extraction
 cd your-project && llm-wiki .
 ```
 
@@ -51,7 +51,7 @@ Two passes extract knowledge from any file type:
 
 | Pass | What | Cost |
 |------|------|------|
-| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML via Docling, with OCR fallback for scanned PDFs. | Free |
+| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML/EPUB via Docling, with OCR fallback for scanned PDFs and bold-as-heading fallback for documents without heading styles. | Free |
 | **Semantic** | Claude Code agents read images with vision; deeper synthesis on any file | Claude tokens |
 
 Output goes to `wiki-out/`:
