@@ -67,6 +67,8 @@ def cmd_node(G: nx.Graph, label: str) -> str:
             f"    source: {d.get('source_file', '')} {d.get('source_location', '')}",
             f"    type: {d.get('file_type', '')}  community: {d.get('community', '')}  degree: {G.degree(nid)}",
         ]
+        if d.get("page") is not None:
+            lines.append(f"    Page: {d['page']}")
         if d.get("signature"):
             lines.append(f"    signature: {d['signature']}")
         if d.get("description"):

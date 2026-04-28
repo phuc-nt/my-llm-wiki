@@ -159,6 +159,34 @@ def _pdf_page_count(path: Path) -> int:
         return 0
 
 
+# Extensions where Docling provides per-heading page numbers.
+# EPUB uses chapter order, not page numbers — excluded intentionally.
+_DOCLING_PAGE_EXTENSIONS = {".pdf", ".docx", ".pptx", ".html", ".htm"}
+
+
+def _docling_headings(path: Path) -> list[dict] | None:
+    """Return Docling-sourced headings (with page) for supported file types.
+
+    Returns a list of {level, text, page} dicts when Docling is available and
+    the file extension supports per-heading page numbers. Returns None when
+    Docling is unavailable, the file type is not supported, or extraction fails
+    — callers fall back to text-based heading extraction.
+    """
+    if path.suffix.lower() not in _DOCLING_PAGE_EXTENSIONS:
+        return None
+    try:
+        import importlib
+        docling_mod = importlib.import_module("my_llm_wiki.extract-with-docling")
+        if not docling_mod.is_docling_available():
+            return None
+        result = docling_mod.extract_with_docling(path)
+        if result.get("error") or not result.get("headings"):
+            return None
+        return result["headings"]  # list of {level, text, page}
+    except Exception:
+        return None
+
+
 def _read_file_text(path: Path) -> str:
     """Read file content as text. Routes through office converters for
     PDF/DOCX/PPTX/HTML so the Docling pipeline (when installed) is used
@@ -214,20 +242,40 @@ def extract_doc(path: Path, root: Path | None = None) -> dict:
     nodes.append(hub_node)
     seen_ids.add(doc_id)
 
-    # Extract h1/h2 headings as section nodes (h3+ too granular)
-    headings = _extract_headings(text)
+    # Extract h1/h2 headings as section nodes (h3+ too granular).
+    # Prefer Docling headings (carry per-heading page numbers) for supported
+    # file types; fall back to text-based extraction for markdown/plain text.
+    docling_hdrs = _docling_headings(path)
+    if docling_hdrs is not None:
+        # Build (level, title, page_or_None, location) from Docling output.
+        # source_location uses page ref; page attr carries the 1-indexed page number.
+        raw_headings: list[tuple[int, str, int | None, str]] = [
+            (h["level"], h["text"], h.get("page"),
+             f"p{h['page']}" if h.get("page") else "L1")
+            for h in docling_hdrs
+            if not _is_noisy_term(h.get("text", ""))
+        ]
+    else:
+        # Text-based fallback: preserve original line-number location; no page attr.
+        raw_headings = [
+            (lvl, title, None, f"L{ln}") for lvl, title, ln in _extract_headings(text)
+        ]
+
     parent_stack: list[tuple[int, str]] = [(0, doc_id)]  # doc is root
-    for level, title, line_no in headings:
+    for level, title, page, location in raw_headings:
         if level > 2:
             continue
         section_id = _make_id(str_path, title)
         if section_id in seen_ids:
             continue
         seen_ids.add(section_id)
-        nodes.append({
-            "id": section_id, "label": title, "file_type": "document",
-            "source_file": str_path, "source_location": f"L{line_no}",
-        })
+        node: dict = {
+            "id": section_id, "label": title, "file_type": file_type,
+            "source_file": str_path, "source_location": location,
+        }
+        if page is not None:
+            node["page"] = int(page)
+        nodes.append(node)
         # Find parent: pop until we find lower level
         while len(parent_stack) > 1 and parent_stack[-1][0] >= level:
             parent_stack.pop()
