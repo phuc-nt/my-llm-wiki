@@ -27,6 +27,13 @@ cd your-project && llm-wiki .
 
 The output `wiki-out/vault/` is a drop-in Obsidian vault — open it directly, or query from CLI. Re-run anytime; SHA256 cache skips unchanged files. `llm-wiki note "<insight>"` writes back from your Claude Code sessions so the graph compounds over time.
 
+### Supported file types
+
+- **Code (19 languages)** — Python, TypeScript/JavaScript, Go, Rust, Java, C/C++, Ruby, C#, and more ([full list](https://phuc-nt.github.io/my-llm-wiki/quick-start.html#supported-languages)). Tree-sitter AST: classes, functions, typed `extends`/`implements`, function signatures, doc comments (Javadoc / JSDoc / GoDoc / `///`), call graph.
+- **Markdown / text** — headings, definitions, `[[wikilinks]]`, cross-document references.
+- **PDF / DOCX / PPTX / HTML / EPUB** — layout-aware extraction via [Docling](https://github.com/docling-project/docling) (`pip install 'my-llm-wiki[docling]'`). Headings + tables preserved. Scanned PDFs auto-OCR. EPUB unpacked via stdlib zipfile and routed through Docling's HTML pipeline. Bold-as-heading fallback for documents without Word Heading styles.
+- **Images (HEIC / PNG / JPG)** — hub nodes from structural pass; vision OCR via Claude Code agent mode (`/wiki .`).
+
 ### Read the docs
 
 The full story lives at **[phuc-nt.github.io/my-llm-wiki](https://phuc-nt.github.io/my-llm-wiki/)**:
