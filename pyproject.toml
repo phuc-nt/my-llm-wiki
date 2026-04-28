@@ -56,7 +56,7 @@ leiden = ["graspologic"]
 office = ["python-docx>=1.0", "openpyxl>=3.1"]
 docling = ["docling>=2.72"]
 all = ["pypdf>=4.0", "html2text", "graspologic", "python-docx>=1.0", "openpyxl>=3.1", "docling>=2.72"]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "reportlab>=4.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]

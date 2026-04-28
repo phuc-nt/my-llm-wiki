@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/my-llm-wiki/"><img src="https://img.shields.io/pypi/v/my-llm-wiki" alt="PyPI"></a>
+  <a href="https://github.com/phuc-nt/my-llm-wiki/actions/workflows/test.yml"><img src="https://github.com/phuc-nt/my-llm-wiki/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <a href="https://phuc-nt.github.io/my-llm-wiki/">Documentation</a> ·
   <a href="https://github.com/phuc-nt/my-llm-wiki/issues">Issues</a>
 </p>
