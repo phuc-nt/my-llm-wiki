@@ -9,42 +9,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _vault_log = importlib.import_module("my_llm_wiki.vault-log")
+_secret_scan = importlib.import_module("my_llm_wiki.secret-patterns")
+_scan_for_secrets = _secret_scan.scan_for_secrets
 
 
 _MAX_TITLE_LEN = 80
 _MAX_SLUG_LEN = 40
-
-# Secret / PII patterns checked against note body before writing.
-# These are noisy by design — better to false-positive than leak a key.
-# Each entry: (pattern, short label for error message).
-_SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    # Private key blocks (PEM)
-    (re.compile(r"-----BEGIN\s+(?:RSA\s+|EC\s+|DSA\s+|OPENSSH\s+)?PRIVATE\s+KEY-----"), "PEM private key"),
-    # AWS access key ID
-    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "AWS access key"),
-    # AWS secret access key (40 base64 chars after "aws_secret" or similar)
-    (re.compile(r"(?i)aws[_\-]?secret[_\-]?access[_\-]?key\s*[=:]\s*['\"]?[A-Za-z0-9/+=]{40}"), "AWS secret"),
-    # Generic API key / token assignments with long opaque values
-    (re.compile(r"(?i)(?:api[_\-]?key|secret|token|password|passwd|bearer)\s*[=:]\s*['\"]?[A-Za-z0-9_\-]{20,}"), "API key/token assignment"),
-    # GitHub personal access token
-    (re.compile(r"\bghp_[A-Za-z0-9]{36,}\b"), "GitHub token"),
-    # GitHub fine-grained PAT
-    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{60,}\b"), "GitHub fine-grained PAT"),
-    # Slack bot/user token
-    (re.compile(r"\bxox[baprs]-[A-Za-z0-9\-]{10,}"), "Slack token"),
-    # Google API key
-    (re.compile(r"\bAIza[0-9A-Za-z_\-]{35}\b"), "Google API key"),
-    # JWT (three base64 segments)
-    (re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b"), "JWT token"),
-]
-
-
-def _scan_for_secrets(text: str) -> str | None:
-    """Return a label of the first secret pattern matched, or None if clean."""
-    for pattern, label in _SECRET_PATTERNS:
-        if pattern.search(text):
-            return label
-    return None
 
 
 def _slugify(text: str) -> str:

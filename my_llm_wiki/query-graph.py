@@ -214,8 +214,12 @@ def cmd_stale_refs(G: nx.Graph, vault_dir: Path) -> str:
     stale: list[str] = []
 
     for md_file in sorted(vault_dir.rglob("*.md")):
+        try:
+            text = md_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
         in_fence = False
-        for lineno, raw in enumerate(md_file.read_text(encoding="utf-8").splitlines(), start=1):
+        for lineno, raw in enumerate(text.splitlines(), start=1):
             # Toggle fenced code block state
             if _FENCE_RE.match(raw.strip()):
                 in_fence = not in_fence

@@ -76,11 +76,6 @@ def _extract_links(text: str) -> list[tuple[str, str]]:
     return [(m.group(1), m.group(2)) for m in _LINK_RE.finditer(text)]
 
 
-def _extract_bold_terms(text: str) -> list[str]:
-    """Extract bold terms as key concepts."""
-    return list(dict.fromkeys(m.group(1) for m in _BOLD_RE.finditer(text)))
-
-
 def _strip_code_blocks(text: str) -> str:
     """Remove fenced code blocks to avoid extracting code snippets as entities."""
     return re.sub(r'```[\s\S]*?```', '', text)

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-_VERSION = "0.8.0"
+_VERSION = "0.9.0"
 
 _HELP = f"""\
 my-llm-wiki v{_VERSION} — turn any folder into a queryable knowledge graph

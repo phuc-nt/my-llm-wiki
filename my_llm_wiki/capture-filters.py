@@ -2,10 +2,13 @@
 # Split from capture.py per KISS/200-LOC rule.
 from __future__ import annotations
 
+import importlib
 import json
 import re
 from pathlib import Path
 from typing import Iterator
+
+_secret_scan = importlib.import_module("my_llm_wiki.secret-patterns")
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -19,14 +22,9 @@ KEYWORD_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Secret detection: conservative bias — skip on any match
-_SECRET_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"sk-[A-Za-z0-9]{20,}"),            # OpenAI
-    re.compile(r"ghp_[A-Za-z0-9]{20,}"),            # GitHub PAT
-    re.compile(r"AKIA[A-Z0-9]{16}"),                # AWS access key
-    re.compile(r"xoxb-[0-9]+-[0-9A-Za-z-]+"),      # Slack bot token
-    re.compile(r"[A-Za-z0-9+/=]{40,}"),             # long base64-ish blob (catch-all)
-]
+# Catch-all for long base64-ish blobs that escape the structured patterns.
+# Conservative: any 40+ char run of base64 alphabet is suspicious.
+_BASE64_BLOB_RE = re.compile(r"[A-Za-z0-9+/=]{40,}")
 
 # Tag heuristics: compiled pattern → tag name
 _TAG_MAP: list[tuple[re.Pattern[str], str]] = [
@@ -47,16 +45,13 @@ _WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 def has_secret(text: str) -> bool:
     """Return True if text contains any known secret pattern.
 
-    Tries to delegate to security-helpers.detect_secrets (DRY); falls back to
-    local regex list if not available.
+    Delegates to the shared secret-patterns module so capture stays in lock-step
+    with note-writer's coverage. Adds a base64-blob catch-all for long opaque
+    strings that don't match a labelled pattern.
     """
-    try:
-        from my_llm_wiki import security_helpers  # type: ignore[attr-defined]
-        if hasattr(security_helpers, "detect_secrets"):
-            return bool(security_helpers.detect_secrets(text))
-    except Exception:
-        pass
-    return any(p.search(text) for p in _SECRET_PATTERNS)
+    if _secret_scan.has_secret(text):
+        return True
+    return bool(_BASE64_BLOB_RE.search(text))
 
 
 # ---------------------------------------------------------------------------
