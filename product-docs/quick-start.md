@@ -50,6 +50,8 @@ llm-wiki query neighbors UserService     # what connects to it?
 llm-wiki query path Auth Database        # shortest path
 llm-wiki query community 0              # largest community
 llm-wiki query stats                     # summary
+llm-wiki query orphans                   # isolated nodes (no connections)
+llm-wiki query stale-refs wiki-out/vault # broken [[wikilinks]] in vault
 ```
 
 ## Health check
@@ -66,16 +68,30 @@ llm-wiki add https://interesting-article.com   # ingest URL
 llm-wiki .                                     # rebuild (cache skips unchanged)
 ```
 
-## Claude Code skill (optional)
+## Capture from LLM sessions
 
-For deep extraction of DOCX, scanned PDFs, and images:
+Extract insights from Claude Code session logs:
+
+```bash
+llm-wiki capture --enable    # opt-in once (required for privacy)
+llm-wiki capture             # scan sessions for note candidates
+```
+
+Outputs to `wiki-out/captured/pending-notes.md`. Review candidates and run `llm-wiki note` to promote them to the vault. Filters by keywords (rationale, trade-off, decided, etc.), min length 50 chars, and skips secrets.
+
+## Claude Code skill
+
+For agent-mode semantic extraction and vault maintenance:
 
 ```bash
 mkdir -p ~/.claude/skills/my-llm-wiki
 cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
+cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/MAINTAIN_SKILL.md" ~/.claude/skills/my-llm-wiki/
 ```
 
-Then in Claude Code, run `/wiki .` for the full pipeline with agent-mode semantic extraction.
+In Claude Code:
+- `/wiki .` — full extraction pipeline with deep synthesis (DOCX, scanned PDFs, images)
+- `/wiki maintain` — semantic vault audit (contradictions, orphans, broken links)
 
 ## Ignore files
 

@@ -20,7 +20,7 @@ Runs with `llm-wiki .`:
   - Doc comments (Javadoc, JSDoc, GoDoc, `///`)
   - Call graph (function-to-function calls)
 - **Markdown/text** — headings, definitions, cross-document links
-- **PDF/DOCX/PPTX/HTML/EPUB** — layout-aware extraction via [Docling](https://github.com/docling-project/docling) (install `[docling]` extra). Headings, tables, and structure preserved. Scanned PDFs auto-detected and re-run with OCR. EPUB unpacked via stdlib zipfile and routed through Docling's HTML pipeline. PDF hub nodes carry a `pages` attribute. Documents using inline `**bold**` instead of heading styles are still sectioned via a fallback heuristic.
+- **PDF/DOCX/PPTX/HTML/EPUB** — layout-aware extraction via [Docling](https://github.com/docling-project/docling) (install `[docling]` extra). Headings, tables, and structure preserved. Scanned PDFs auto-detected and re-run with OCR. EPUB unpacked via stdlib zipfile and routed through Docling's HTML pipeline. PDF hub nodes carry a `pages` attribute. **Per-heading page citations:** heading nodes from PDF/DOCX/PPTX/HTML carry `page: N` (1-indexed) in vault YAML frontmatter and `Page: N` in CLI output. Documents using inline `**bold**` instead of heading styles are still sectioned via a fallback heuristic.
 - **Images** — hub nodes (content needs agent mode)
 - **Cross-reference** — code entities mentioned in docs get `mentions` edges
 
@@ -133,10 +133,13 @@ llm-wiki query community <id>       # community members by degree
 llm-wiki query path <A> <B>         # shortest path
 llm-wiki query gods                 # top 10 most connected
 llm-wiki query stats                # summary
+llm-wiki query orphans              # isolated nodes (excludes image hubs by default)
+llm-wiki query stale-refs <vault>   # broken [[wikilinks]] in vault markdown
 llm-wiki lint                       # health check
 llm-wiki watch .                    # auto-rebuild on changes
 llm-wiki add <url>                  # fetch URL as markdown
 llm-wiki note "<insight>" [--link <node>] [--tag <tag>]   # write-back insight
+llm-wiki capture [--since <time>]   # scan sessions for note candidates
 llm-wiki --no-viz .                 # skip HTML for large graphs
 llm-wiki --version                  # show version
 ```
@@ -162,6 +165,28 @@ The note is saved to `wiki-out/ingested/note-<timestamp>-<slug>.md` with YAML fr
 
 ---
 
+## Capture from LLM sessions
+
+Reverse direction of write-back: read insights *from* Claude Code session logs.
+
+```bash
+llm-wiki capture --enable          # opt-in one-time (required for privacy)
+llm-wiki capture                   # scan ~/.claude/sessions for notes
+llm-wiki capture --since 24h       # scan last 24 hours only
+llm-wiki capture --project /path   # specify non-default .claude location
+llm-wiki capture --out /path       # custom output file
+```
+
+Writes candidates to `wiki-out/captured/pending-notes.md`. Filtering rules:
+- **Keywords**: vì, lý do, because, rationale, trade-off, decided, design choice
+- **Min length**: 50 characters
+- **Secret skip**: PEM, AWS, GitHub PAT, JWT, Google API key, OpenAI, Slack, api-key assignments, generic base64 blobs
+- **Role**: user messages only (agents are noisy)
+
+Privacy first: opt-in flag stored in `wiki-out/cache/capture-enabled`. No network calls. Markdown JSONL parsing only.
+
+---
+
 ## Obsidian compatibility
 
 `wiki-out/vault/` is a drop-in Obsidian vault. Each node becomes one markdown file with:
@@ -180,6 +205,19 @@ llm-wiki .
 ```
 
 **Trade-off:** Obsidian wikilinks are untyped, so `extends` / `implements` / `calls` / `mentions` all render as generic links in Obsidian's graph view. Use `llm-wiki query neighbors <label>` from the CLI for typed-edge detail.
+
+---
+
+## Semantic vault lint (`/wiki maintain`)
+
+In Claude Code, use `/wiki maintain` to run a full audit of your vault. This agent-mode workflow:
+
+- Samples vault notes and documents
+- Checks for contradictions, stale TODOs, orphan concepts, broken `[[wikilinks]]`, and missing definitions
+- Uses `llm-wiki query orphans` and `llm-wiki query stale-refs` for data
+- Writes `wiki-out/maintain-report-<YYYYMMDD-HHMM>.md` with findings and recommendations
+
+See MAINTAIN_SKILL.md (shipped in package) for full details.
 
 ---
 

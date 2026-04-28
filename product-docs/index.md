@@ -61,3 +61,17 @@ wiki-out/
 ```
 
 See [How It Works]({{ site.baseurl }}/how-it-works.html) for the full pipeline architecture.
+
+---
+
+### v0.9 — Semantic vault maintenance & session capture
+
+**Per-heading page citations:** PDFs, Word docs, and slides now track which page each heading came from (visible in vault YAML and CLI output).
+
+**Session capture:** `llm-wiki capture` scans your Claude Code logs and extracts note candidates. Review them, promote to vault with `llm-wiki note`.
+
+**Vault maintenance:** `/wiki maintain` agent runs semantic audits — detects orphans, broken links, contradictions, stale TODOs.
+
+**New query helpers:** `llm-wiki query orphans` and `llm-wiki query stale-refs` power the audit workflow.
+
+**CI matrix:** Tests on Linux, macOS, Windows × Python 3.10–3.13. Integration tests on Ubuntu + Python 3.13.
