@@ -222,3 +222,9 @@ llm-wiki --help                     # show help
 pip install my-llm-wiki
 pip install my-llm-wiki[all]   # PDF + .docx/.xlsx + Leiden
 ```
+
+---
+
+### Session capture
+
+Run `llm-wiki capture --enable` once to opt in, then `llm-wiki capture` to scan recent Claude Code session logs for decision/rationale messages. Candidates are written to `wiki-out/captured/pending-notes.md` for review — promote any worth keeping with `llm-wiki note`. Use `--since 7d` to widen the look-back window.

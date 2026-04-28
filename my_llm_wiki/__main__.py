@@ -17,6 +17,7 @@ Usage:
   llm-wiki watch [path] [interval]   Auto-rebuild on file changes
   llm-wiki add <url> [--author name] Fetch URL, save as markdown
   llm-wiki note <text> [opts]        File an insight into wiki-out/ingested/
+  llm-wiki capture [opts]            Scan Claude Code sessions for note candidates
 
 Query commands:
   search <terms>   node <label>      neighbors <label>
@@ -27,6 +28,12 @@ Note options:
   --tag <name>     Tag the insight (repeatable)
   --title <text>   Custom heading (default: first line of text)
   --allow-secrets  Skip secret/API-key scan (use only for false positives)
+
+Capture options:
+  --enable         Opt in to session scanning (writes flag file; required once)
+  --since <dur>    Look-back window: 24h, 7d, etc. (default: 24h)
+  --project <path> Project root to match sessions against (default: cwd)
+  --out <path>     wiki-out directory (default: ./wiki-out)
 
 Options:
   --version        Show version
@@ -152,6 +159,44 @@ def main() -> None:
             sys.exit(1)
         print(f"[wiki] Note saved: {path}")
         print("[wiki] Run `llm-wiki .` to fold it into the graph.")
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "capture":
+        import importlib
+        _capture = importlib.import_module("my_llm_wiki.capture")
+        cap_args = sys.argv[2:]
+        enable = "--enable" in cap_args
+        # --since <dur>: parse simple formats like 24h, 7d
+        since_hours = 24.0
+        if "--since" in cap_args:
+            idx = cap_args.index("--since")
+            if idx + 1 < len(cap_args):
+                dur = cap_args[idx + 1]
+                if dur.endswith("h"):
+                    since_hours = float(dur[:-1])
+                elif dur.endswith("d"):
+                    since_hours = float(dur[:-1]) * 24
+                else:
+                    print(f"[wiki] Unrecognised --since format: {dur!r}. Use e.g. 24h or 7d.")
+                    sys.exit(1)
+        # --project <path>
+        project_cwd = Path(".")
+        if "--project" in cap_args:
+            idx = cap_args.index("--project")
+            if idx + 1 < len(cap_args):
+                project_cwd = Path(cap_args[idx + 1])
+        # --out <path>
+        wiki_out = Path("wiki-out")
+        if "--out" in cap_args:
+            idx = cap_args.index("--out")
+            if idx + 1 < len(cap_args):
+                wiki_out = Path(cap_args[idx + 1])
+        _capture.capture(
+            project_cwd=project_cwd.resolve(),
+            wiki_out=wiki_out,
+            since_hours=since_hours,
+            enable=enable,
+        )
         return
 
     if len(sys.argv) > 1 and sys.argv[1] == "add":
