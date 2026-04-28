@@ -67,4 +67,4 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 
 [tool.setuptools.package-data]
-my_llm_wiki = ["SKILL.md"]
+my_llm_wiki = ["SKILL.md", "MAINTAIN_SKILL.md"]

@@ -228,3 +228,9 @@ pip install my-llm-wiki[all]   # PDF + .docx/.xlsx + Leiden
 ### Session capture
 
 Run `llm-wiki capture --enable` once to opt in, then `llm-wiki capture` to scan recent Claude Code session logs for decision/rationale messages. Candidates are written to `wiki-out/captured/pending-notes.md` for review — promote any worth keeping with `llm-wiki note`. Use `--since 7d` to widen the look-back window.
+
+---
+
+### Vault maintenance
+
+Trigger: `/wiki maintain` — runs a full semantic audit of the vault. Detects contradictions, stale TODOs, orphan concepts, broken `[[wikilinks]]`, and missing definitions. Writes `wiki-out/maintain-report-<YYYYMMDD-HHMM>.md`. Uses `llm-wiki query orphans` and `llm-wiki query stale-refs` as its primary data sources. Full instructions in `MAINTAIN_SKILL.md`.

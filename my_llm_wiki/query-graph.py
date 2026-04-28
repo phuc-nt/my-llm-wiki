@@ -1,8 +1,10 @@
 # CLI query interface for wiki-out/graph.json
-# Supports: node lookup, neighbors, community listing, shortest path, stats, search
+# Supports: node lookup, neighbors, community listing, shortest path, stats, search,
+#           orphan detection, stale wikilink ref detection
 from __future__ import annotations
 import importlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -160,6 +162,79 @@ def cmd_search(G: nx.Graph, query: str) -> str:
     return "\n".join(lines)
 
 
+_HUB_FILE_TYPES = {"image"}
+
+
+def cmd_orphans(G: nx.Graph, include_hubs: bool = False) -> str:
+    """List nodes with no edges (degree == 0).
+
+    Args:
+        G: The knowledge graph.
+        include_hubs: When False (default), skip image-type hub nodes — they
+            are intentionally low-degree and would generate false-positive noise.
+    """
+    orphan_labels: list[str] = []
+    for nid, data in G.nodes(data=True):
+        if G.degree(nid) != 0:
+            continue
+        if not include_hubs and data.get("file_type") in _HUB_FILE_TYPES:
+            continue
+        orphan_labels.append(data.get("label", nid))
+
+    lines: list[str] = []
+    for lbl in sorted(orphan_labels):
+        lines.append(f"  {lbl}")
+    count = len(orphan_labels)
+    lines.append(f"\n{count} orphan node(s) found.")
+    if not include_hubs:
+        lines.append("(image hub nodes excluded — use --include-hubs to show them)")
+    return "\n".join(lines)
+
+
+# Regex for wikilinks: [[Label]] or [[Label#Anchor]]
+_WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+_FENCE_RE = re.compile(r"^```")
+
+
+def cmd_stale_refs(G: nx.Graph, vault_dir: Path) -> str:
+    """Scan vault markdown files for [[wikilinks]] that don't resolve to a node.
+
+    Skips content inside fenced code blocks (``` ... ```).
+    Normalises [[Label#Anchor]] to just "Label" before lookup.
+
+    Returns one line per stale ref: "<file>:<line> -> [[Missing]]"
+    plus a summary count.
+    """
+    # Build set of known labels for O(1) lookup (case-sensitive match)
+    known_labels: set[str] = {
+        data.get("label", nid)
+        for nid, data in G.nodes(data=True)
+    }
+
+    stale: list[str] = []
+
+    for md_file in sorted(vault_dir.rglob("*.md")):
+        in_fence = False
+        for lineno, raw in enumerate(md_file.read_text(encoding="utf-8").splitlines(), start=1):
+            # Toggle fenced code block state
+            if _FENCE_RE.match(raw.strip()):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            for match in _WIKILINK_RE.finditer(raw):
+                ref = match.group(1)
+                # Normalise section anchors: "Foo#Bar" → "Foo"
+                label = ref.split("#")[0].strip()
+                if label and label not in known_labels:
+                    rel = md_file.relative_to(vault_dir)
+                    stale.append(f"  {rel}:{lineno} -> [[{label}]]")
+
+    count = len(stale)
+    lines = stale + [f"\n{count} stale reference(s) found."]
+    return "\n".join(lines)
+
+
 _USAGE = """\
 Usage: llm-wiki query <command> [args]
 
@@ -171,6 +246,8 @@ Commands:
   path <source> <target>  Shortest path between two concepts
   gods                    Most connected nodes
   stats                   Graph summary statistics
+  orphans                 List nodes with no connections (isolated concepts)
+  stale-refs <vault>      Find [[wikilinks]] that don't resolve to a graph node
 
 Examples:
   llm-wiki query search GraphStore
@@ -180,6 +257,9 @@ Examples:
   llm-wiki query path GraphStore Settings
   llm-wiki query gods
   llm-wiki query stats
+  llm-wiki query orphans
+  llm-wiki query orphans --include-hubs
+  llm-wiki query stale-refs wiki-out/vault
 """
 
 
@@ -218,5 +298,16 @@ def query_main(args: list[str], graph_path: str = "wiki-out/graph.json") -> None
         print(cmd_gods(G))
     elif cmd == "stats":
         print(cmd_stats(G, communities))
+    elif cmd == "orphans":
+        include_hubs = "--include-hubs" in rest
+        print(cmd_orphans(G, include_hubs=include_hubs))
+    elif cmd == "stale-refs":
+        # Positional arg: vault directory (default: wiki-out/vault)
+        vault_arg = next((r for r in rest if not r.startswith("--")), "wiki-out/vault")
+        vault_dir = Path(vault_arg)
+        if not vault_dir.is_dir():
+            print(f"[wiki] Vault directory not found: {vault_dir}")
+            sys.exit(1)
+        print(cmd_stale_refs(G, vault_dir))
     else:
         print(_USAGE)
