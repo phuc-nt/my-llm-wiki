@@ -18,96 +18,24 @@
 
 In April 2026, Andrej Karpathy [shared a concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) he called **LLM Wiki** — a personal knowledge system with three layers: raw files (never modified), a compiled wiki with cross-references, and a schema that tells the LLM how to maintain it. The key insight: **compile once, query forever**, and let the wiki grow with every session as a "persistent, compounding artifact" rather than re-deriving knowledge on every query.
 
-`my-llm-wiki` implements all three layers. See [How It's Built](https://phuc-nt.github.io/my-llm-wiki/why.html) for the full narrative on how Karpathy's vision is realized.
+`my-llm-wiki` implements all three layers.
 
 ```bash
-pip install my-llm-wiki              # core: code + markdown
-pip install 'my-llm-wiki[docling]'   # + layout-aware PDF/DOCX/PPTX/HTML/EPUB extraction
+pip install my-llm-wiki
 cd your-project && llm-wiki .
 ```
 
-### The Living Wiki
+The output `wiki-out/vault/` is a drop-in Obsidian vault — open it directly, or query from CLI. Re-run anytime; SHA256 cache skips unchanged files. `llm-wiki note "<insight>"` writes back from your Claude Code sessions so the graph compounds over time.
 
-One command builds the graph. The living wiki cycle keeps it growing over time — each session adds knowledge, insights get filed back, the graph compounds.
+### Read the docs
 
-```
-┌──────────────────────────────────────────────────┐
-│                                                  │
-│   ┌──────────┐    ┌──────────┐    ┌──────────┐  │
-│   │ Monitor  │───▶│ Rebuild  │───▶│  Lint    │  │
-│   │ (watch)  │    │ (cached) │    │ (health) │  │
-│   └──────────┘    └──────────┘    └──────────┘  │
-│        ▲                               │         │
-│        │                               ▼         │
-│   ┌──────────┐                  ┌──────────┐    │
-│   │  Report  │◀─────────────────│Write-back│    │
-│   │ (stats)  │                  │(insights)│    │
-│   └──────────┘                  └──────────┘    │
-│                                                  │
-└──────────────────────────────────────────────────┘
-```
+The full story lives at **[phuc-nt.github.io/my-llm-wiki](https://phuc-nt.github.io/my-llm-wiki/)**:
 
-Two passes extract knowledge from any file type:
-
-| Pass | What | Cost |
-|------|------|------|
-| **Structural** | AST (19 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML/EPUB via Docling, with OCR fallback for scanned PDFs and bold-as-heading fallback for documents without heading styles. | Free |
-| **Semantic** | Claude Code agents read images with vision; deeper synthesis on any file | Claude tokens |
-
-Output goes to `wiki-out/`:
-
-```
-wiki-out/
-  graph.html       ← interactive graph (vis.js)
-  graph.json       ← persistent graph data
-  WIKI_REPORT.md   ← god nodes, surprising connections
-  wiki/            ← Wikipedia-style articles
-  vault/           ← Obsidian vault — index.md catalog + [[wikilinks]] + YAML frontmatter
-  cache/           ← SHA256 cache (skip unchanged files)
-```
-
-### Obsidian integration
-
-`wiki-out/vault/` is a drop-in Obsidian vault. Open it directly, or symlink into an existing vault:
-
-```bash
-llm-wiki .
-# Obsidian → Open folder as vault → wiki-out/vault/
-```
-
-You get: graph view (force-directed), backlinks, tag pane, full-text search, and Properties view (Obsidian 1.4+ reads the YAML frontmatter on each node). Community colors are pre-configured via `.vault/graph.json`. Use `llm-wiki query` from CLI for typed-edge details (Obsidian wikilinks are untyped, so `extends`/`implements`/`calls` collapse to generic links in the Obsidian graph view).
-
-Node notes are organized into `code/`, `document/`, `paper/`, `image/`, `note/`, and `other/` subfolders so the vault stays navigable as it grows. Community summaries live in `communities/`. Wikilinks remain basename-only — Obsidian resolves them across the vault regardless of folder.
-
-**`vault/index.md`** is the entry point — content catalog grouped by file type with a Communities section. LLMs (and humans) read it first to navigate the vault before drilling into specific notes.
-
-**`vault/log.md`** is the append-only activity log — chronological record of every build and note write-back. Grep-friendly format for auditing how the wiki has grown over time.
-
-### CLI
-
-```bash
-llm-wiki .                          # build graph
-llm-wiki query gods                 # most connected nodes
-llm-wiki query search <term>        # keyword search
-llm-wiki query path <A> <B>         # shortest path
-llm-wiki lint                       # graph health check
-llm-wiki watch .                    # auto-rebuild on changes
-llm-wiki add <url>                  # ingest URL
-llm-wiki note "<insight>"           # write-back from LLM session
-```
-
-### Claude Code Skill
-
-```bash
-mkdir -p ~/.claude/skills/my-llm-wiki
-cp "$(python -c 'import my_llm_wiki; print(my_llm_wiki.__path__[0])')/SKILL.md" ~/.claude/skills/my-llm-wiki/
-```
-
-Then `/wiki .` in Claude Code — structural extraction + agent-mode semantic extraction for DOCX, scanned PDFs, images.
-
-### Docs
-
-**[phuc-nt.github.io/my-llm-wiki](https://phuc-nt.github.io/my-llm-wiki/)**
+- **[How It's Built](https://phuc-nt.github.io/my-llm-wiki/why.html)** — narrative: Karpathy's vision → three layers → the living wiki cycle
+- **[Install & Quick Start](https://phuc-nt.github.io/my-llm-wiki/quick-start.html)** — first graph in 30 seconds
+- **[Core Features](https://phuc-nt.github.io/my-llm-wiki/core-features.html)** — two-pass extraction, typed inheritance, doc comments, communities, write-back
+- **[How It Works](https://phuc-nt.github.io/my-llm-wiki/how-it-works.html)** — pipeline internals
+- **[Use Cases](https://phuc-nt.github.io/my-llm-wiki/use-cases.html)** — codebases, research notes, mixed knowledge
 
 ### License
 
