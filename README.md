@@ -51,7 +51,7 @@ Two passes extract knowledge from any file type:
 
 | Pass | What | Cost |
 |------|------|------|
-| **Structural** | AST (18 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML/EPUB via Docling, with OCR fallback for scanned PDFs and bold-as-heading fallback for documents without heading styles. | Free |
+| **Structural** | AST (19 languages): classes, functions, typed `extends`/`implements` edges, function signatures, doc comments (Javadoc/JSDoc/GoDoc), call graph, headings, cross-ref. Layout-aware extraction for PDF/DOCX/PPTX/HTML/EPUB via Docling, with OCR fallback for scanned PDFs and bold-as-heading fallback for documents without heading styles. | Free |
 | **Semantic** | Claude Code agents read images with vision; deeper synthesis on any file | Claude tokens |
 
 Output goes to `wiki-out/`:

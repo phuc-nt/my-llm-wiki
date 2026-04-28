@@ -13,7 +13,7 @@ description: "Two-pass extraction, doc comments, cross-referencing, community de
 
 Runs with `llm-wiki .`:
 
-- **Code** (18 languages) — tree-sitter AST with rich metadata:
+- **Code** (19 languages) — tree-sitter AST with rich metadata:
   - Classes, functions, methods, imports
   - **Typed inheritance edges**: `extends` (base class) and `implements` (interface)
   - **Function signatures**: parameters + return types preserved verbatim
@@ -30,7 +30,7 @@ Runs in Claude Code via `/wiki .`. Dispatches subagents for deeper synthesis on 
 
 | File Type | Structural | + Agent | Verdict |
 |-----------|-----------|---------|---------|
-| Code (18 langs) | Full AST + doc comments | — | No agent needed |
+| Code (19 langs) | Full AST + doc comments | — | No agent needed |
 | Markdown | Headings + links | 2x entities | Optional |
 | DOCX/PPTX/HTML/EPUB | Layout-aware extraction (Docling) | Deeper synthesis | Optional |
 | PDF (text) | Layout + page count (Docling) | Deeper synthesis | Optional |

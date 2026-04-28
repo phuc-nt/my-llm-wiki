@@ -208,7 +208,7 @@ llm-wiki --help                     # show help
 
 | File Type | Structural | + Agent | Verdict |
 |-----------|-----------|---------|---------|
-| Code (18 langs) | Full AST + doc comments | — | Skip agent |
+| Code (19 langs) | Full AST + doc comments | — | Skip agent |
 | Markdown | Headings + links | 2x entities | Optional |
 | DOCX | Hub nodes only | 30x entities | **Use agent** |
 | Scanned PDF | 0 text | 85x entities | **Use agent** |
